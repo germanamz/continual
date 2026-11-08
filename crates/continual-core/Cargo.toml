@@ -1,0 +1,12 @@
+[package]
+name = "continual-core"
+description = "Continual's core: domain types and ports, with no I/O."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true
