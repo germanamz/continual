@@ -8,9 +8,10 @@ This document describes how the checks work and why they are built this way.
 
 ## Behaviour
 
-- `cargo xtask ci` runs every check in the order CI runs them and stops at the first failure:
-  fmt, clippy, doc, comments, arch, guard, nextest, doctests, coverage, deny, machete. When a
-  tool is missing, it prints the command that installs it.
+- `cargo xtask ci` runs every check in the order CI runs them: fmt, clippy, doc, comments,
+  arch, guard, nextest, doctests, coverage, deny, machete. It stops at the first failure, unless
+  the failing step is [configured to continue](#pipeline-failures). When a tool is missing, it
+  prints the command that installs it.
 - A check prints each finding as `path:line: message`, so editors make it clickable. A check
   with findings exits with code 1. A check that cannot run, for example because the base ref
   is missing in a shallow clone, exits with code 2 and names the cause. It never reports
@@ -101,6 +102,21 @@ This document describes how the checks work and why they are built this way.
 - **`ci`** runs the pipeline. Its step list is data in `xtask/src/pipeline.rs`, so the order,
   the arguments and the required-tool table are tested.
 
+### Pipeline failures
+
+> Planned: [Configure which failures stop the pipeline](../tickets/configure-which-failures-stop-the-pipeline.md)
+
+Each step either stops the pipeline when it fails or lets it continue, and the pipeline stops
+at the first failure of a step that stops it. A step that continues prints its failure, and the
+steps after it run. Either way the pipeline fails when any step failed, and its last line names
+every failed step, in order. A step stops the pipeline unless it is configured to continue, so
+with no configuration the pipeline stops at the first failure.
+
+The setting is a field of each `Step` in `xtask/src/pipeline.rs`, so it is data and tested like
+the order and the arguments. It is the "first configured failure" of the
+[pipeline](../VISION.md#pipeline): the repository, not Continual, decides which failures end a
+run.
+
 ### Tests
 
 The tests run under cargo-nextest. Its `ci` profile in `.config/nextest.toml` turns off
@@ -167,3 +183,14 @@ check, and `pre-push` runs `cargo xtask ci`.
   where path separators and line endings differ.
 - **Failing paths are proven by fixture tests, not by a throwaway pull request** with
   deliberate violations. The passing path in CI is proven by every pull request.
+- **A failing step stops the pipeline unless configured otherwise.** A repository with no
+  configuration gets the strict behaviour, and continuing is a choice made per step. Rejected:
+  a single switch for the whole pipeline, which cannot keep the checks a repository depends on
+  stopping while the others continue.
+
+## Open questions
+
+- Which of Continual's own steps continue after a failure, for example the static checks
+  before the tests, so that one run reports all of their failures.
+  [Configure which failures stop the pipeline](../tickets/configure-which-failures-stop-the-pipeline.md)
+  decides it.

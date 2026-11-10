@@ -49,7 +49,7 @@ One term per concept (Q1). Reuse these words in code, tests and docs.
 | Check | One step that inspects a repository and either passes or reports findings. Named by a check name (`CheckName`). |
 | Check name | The lowercase, hyphenated name a contributor types to run one check, such as `comments` (`CheckName`). |
 | Finding | One violation a check reports, located as `path:line: message`. |
-| Pipeline | The ordered checks that run together, stopping at the first failure, the same way locally and in CI. |
+| Pipeline | The ordered checks that run together, stopping at the first failure of a check configured to stop it, the same way locally and in CI. |
 | Tool | An existing program a check runs, such as a formatter, linter, test runner or coverage tool. Continual runs tools; it never reimplements them. |
 | Gate | A check that blocks a change until it passes, or until a contributor approves it. |
 | Guarded change | A change to existing tests or gate files, which needs a contributor's approval. |

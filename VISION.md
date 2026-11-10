@@ -10,8 +10,8 @@ every time, on every machine and in CI.
 
 ### Pipeline
 
-Continual runs a repository's checks in a fixed order and stops at the first failure. The
-pipeline that runs locally is the one CI runs, so a change that passes on a contributor's
+Continual runs a repository's checks in a fixed order and stops at the first configured failure.
+The pipeline that runs locally is the one CI runs, so a change that passes on a contributor's
 machine passes in CI. When a tool a check needs is missing, Continual prints the command that
 installs it.
 
@@ -40,7 +40,7 @@ Continual has its own checks for rules that existing tools do not cover:
   contributor's approval. The guard warns locally and blocks in CI until a contributor
   approves the change.
 - **Commit messages**: commits and pull requests follow the repository's message rules,
-  such as Conventional Commits and no AI attribution.
+  such as Conventional Commits and no AI attribution, configurable by the user.
 
 ### Languages
 
@@ -65,7 +65,7 @@ implementation behind all of them.
 Harness mods, starting with Claude Code, that format and check each file an agent edits,
 run the quick checks before an agent's turn ends, block commands that skip checks, and hold
 the review gate: an agent commits, pushes or opens a pull request only when a contributor
-asks.
+asks, unless explicitly allowed by the user.
 
 ### CI
 
