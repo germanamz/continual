@@ -3,7 +3,7 @@
 Each document here describes one area of Continual as a whole: what the area does, its concepts,
 its behaviour, how it is built and why. Together they are the design of the system, both what
 is built and what is planned. Planned work is tracked as tickets in [`tickets/`](../tickets/).
-The rules for both are K1 to K8 in
+The rules for both are K1 to K9 in
 [CONVENTIONS.md](../CONVENTIONS.md#design-documents-and-tickets-k).
 
 | Document | Area |
@@ -11,6 +11,10 @@ The rules for both are K1 to K8 in
 | [Workspace](workspace.md) | The crates, their roles, how the architecture maps onto them, and their shared configuration. |
 | [Checks](checks.md) | Lints, the `cargo xtask` checks, tests, coverage, mutation testing, supply chain, commit messages, git hooks and CI. |
 | [Workflow](workflow.md) | How a change goes from idea to merged pull request: design documents, tickets, agent rules, the review gate, Claude Code hooks and Tusk. |
+| [Pipeline](pipeline.md) | `continual.toml`, steps and their graph, timeouts, runs, output and exit codes, packages, events and placeholders. |
+| [Built-in checks](built-in-checks.md) | Continual's own checks (comments, architecture, guard, commit messages) and the language adapters behind them. |
+| [Harness](harness.md) | The Claude Code mod: agent events, the review gate and blocked commands. |
+| [Distribution](distribution.md) | How Continual is installed and released. |
 
 A new area gets its own document and a row in this table, in the same change that introduces
 it. An area is a behaviour from [VISION.md](../VISION.md), such as the pipeline or harness

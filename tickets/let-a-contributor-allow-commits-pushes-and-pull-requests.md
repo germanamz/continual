@@ -1,6 +1,7 @@
 ---
 type: ticket
 title: Let a contributor allow commits, pushes and pull requests
+points: 3
 priority: medium
 status: pending
 ---

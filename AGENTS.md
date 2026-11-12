@@ -79,7 +79,9 @@ fixes for PR comments.
 - No spec, plan or proposal documents, even when a skill asks for one. The design goes in the
   design documents in `docs/`, updated in the same PR as the change (K1–K3, K8).
 - Planned work is a Tusk ticket in `tickets/` (see `tickets/README.md`). Unbuilt design is marked
-  `> Planned: [title](../tickets/<name>.md)` until the PR that builds it (K4–K7).
+  `> Planned: [title](../tickets/<path>.md)` until the PR that builds it (K4–K7).
+- A task is 1, 2 or 3 Fibonacci points, one PR, workable on its own; work of 5 or more is a
+  story split into tasks (K9).
 
 ## Stop and report when
 

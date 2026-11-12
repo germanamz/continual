@@ -30,11 +30,28 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
 | `continual` | `crates/continual/` | The CLI binary. `main.rs` is the composition root and `cli.rs` the driving adapter, built on clap. |
 | `xtask` | `xtask/` | Repository tooling, the checks behind `cargo xtask` ([Checks](checks.md)). Product crates never depend on it. |
 
-Adapter crates will live under `crates/adapters/<name>/`, and none exist yet. A driven port
-and its adapter arrive with the first feature that needs them. The expected ones (running
-tools, reading the repository, comparing with a base revision, reading a language's source,
-the clock) are listed in [Continual's hexagon](../CONVENTIONS.md#3-continuals-hexagon).
-Harness hooks will be driving adapters.
+Adapter crates live under `crates/adapters/<name>/`, and none exist yet. A driven port and its
+adapter arrive with the first feature that needs them. The ports are listed in
+[Continual's hexagon](../CONVENTIONS.md#3-continuals-hexagon), and the design document of each
+area says what its ports ask.
+
+### Planned crates
+
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+
+| Crate | Path | Implements | Designed in |
+| --- | --- | --- | --- |
+| `continual-toml-config` | `crates/adapters/toml-config/` | `ConfigSource` | [Pipeline](pipeline.md#ports-and-adapters) |
+| `continual-process` | `crates/adapters/process/` | `ToolRunner` | [Pipeline](pipeline.md#ports-and-adapters) |
+| `continual-terminal` | `crates/adapters/terminal/` | `Report` | [Pipeline](pipeline.md#ports-and-adapters) |
+| `continual-git` | `crates/adapters/git/` | `SourceTree`, `ChangeHistory` | [Built-in checks](built-in-checks.md#ports-and-adapters) |
+| `continual-rust` | `crates/adapters/rust/` | `LanguageSyntax` for Rust | [Built-in checks](built-in-checks.md#ports-and-adapters) |
+| `continual-session-state` | `crates/adapters/session-state/` | `GateState` | [Harness](harness.md#design) |
+
+The core grows the feature modules `workspace`, `pipeline`, `events`, `checks` and `gate`.
+`crates/continual` keeps the composition root and two driving adapters: `cli.rs` and
+`harness/claude.rs`. Every language adapter is compiled into the one binary
+([Distribution](distribution.md#decisions)).
 
 `arch.toml` classifies every crate as core, composition root, adapter or tooling, and lists
 the core's allowed external dependencies (none yet) and the couplings allowed between adapters
@@ -96,17 +113,18 @@ configuration.
 - **One binary.** Continual runs from a terminal, a git hook, a CI job or an agent harness, and
   each of those can call the `continual` binary, so there is one composition root. A second
   deployable gets its own when it exists.
-- **The repository's own checks stay in `xtask` for now.** They are the checks Continual
-  generalises. Product crates never depend on `xtask`, so the checks can move into Continual
-  without changing the product's architecture.
+- **The repository's own checks stay in `xtask` until the first release.** They are the
+  checks Continual generalises. Product crates never depend on `xtask`, so the checks can
+  move into Continual without changing the product's architecture, and they move once a
+  released `continual` can take over ([Checks: self-hosting](checks.md#self-hosting)).
+- **Adapters use the libraries `xtask` already uses.** `toml` and serde for configuration,
+  `std::process` for tools and git, and `ra-ap-rustc_lexer`, `syn` and `toml` for Rust, so
+  the first adapters add no new dependency.
 - **clap with the derive feature**, since every future command needs argument parsing.
 - **Smoke tests run the built binary** through `env!("CARGO_BIN_EXE_continual")` and
   `std::process::Command`, so they need no extra test dependency.
 
 ## Open questions
 
-- When Continual's own repository switches from `cargo xtask` to the `continual` binary for
-  its checks.
-- The configuration format a repository uses to declare its checks, tools and thresholds.
-- The process, git and language-parsing libraries behind the first adapters. Each is decided
+- Which shell-word splitting the `toml-config` adapter and the harness adapter use, decided
   with the feature that first needs it.

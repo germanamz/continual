@@ -121,6 +121,7 @@ properties = [
     { name = "priority", type = "enum", values = ["low", "medium", "high"] },
     { name = "due",      type = "date" },
     { name = "order",    type = "int" },
+    { name = "points",   type = "int" },
 ]
 
 [edge-types.parent]
@@ -176,6 +177,21 @@ filter      = "type=ticket AND NOT path=tickets/**"
 [rule.tickets-folder]
 description = "tickets/ holds only tickets"
 filter      = "path=tickets/** AND NOT type=ticket"
+
+# Points are relative effort on the Fibonacci scale (K9).
+[rule.ticket-points]
+description = "points are 1, 2, 3, 5, 8, 13 or 21"
+filter      = "type=ticket AND points=* AND NOT (points=1 OR points=2 OR points=3 OR points=5 OR points=8 OR points=13 OR points=21)"
+
+# A ticket with no children is a task of 1, 2 or 3 points; bigger work is a story (K9).
+[rule.task-size]
+description = "a ticket with no children is a task of 1, 2 or 3 points; split work of 5 or more into tasks under a story"
+filter      = "type=ticket AND NOT parent<- type=ticket AND NOT points=1..3"
+
+# A story or an epic is sized by its tasks and carries no points of its own (K9).
+[rule.parent-points]
+description = "a ticket with children carries no points; its size is the sum of its tasks"
+filter      = "type=ticket AND parent<- type=ticket AND points=*"
 
 # The design lives in the design documents, not in specs or plans (K1).
 [rule.no-specs-or-plans]

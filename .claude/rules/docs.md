@@ -6,7 +6,7 @@ paths:
 
 # Design document and ticket rules
 
-The full rules are K1 to K8 in `CONVENTIONS.md`. The outline and the planned-marker format are
+The full rules are K1 to K9 in `CONVENTIONS.md`. The outline and the planned-marker format are
 in `docs/README.md`, and the ticket template and Tusk calls in `tickets/README.md`.
 
 - `docs/` holds one living design document per area. Never add a spec, plan, proposal or
@@ -16,10 +16,14 @@ in `docs/README.md`, and the ticket template and Tusk calls in `tickets/README.m
   change history. Rewrite the parts the design changes instead of appending (K2).
 - Update the affected documents in the same PR as the change. A new area gets a document and a
   row in `docs/README.md` (K3).
-- Mark a designed but unbuilt part with `> Planned: [<ticket title>](../tickets/<name>.md)`.
+- Mark a designed but unbuilt part with `> Planned: [<ticket title>](../tickets/<path>.md)`.
   Remove the marker in the PR that builds it (K4).
-- A ticket is one PR-sized change at `tickets/<name>.md`, created with `status: pending`.
-  Larger work is a parent ticket with children naming it in `parent`; `blocks` orders them (K5).
+- A ticket lives under `tickets/`, created with `status: pending`: a task in its story's folder,
+  a story as `story.md` in a numbered area folder inside its epic's folder, an epic as
+  `epic.md`. Children name their parent in `parent`; `blocks` orders them (K5).
+- Estimate in Fibonacci points. A task is 1, 2 or 3 points, one PR, workable on its own from
+  what is merged. Work of 5 or more is a story with no points of its own, split into tasks;
+  an epic groups stories (K9).
 - A ticket has a goal, links to the design sections, the behaviours to test and done criteria.
   It never restates the design (K6).
 - Move the status through Tusk (`tusk_node_modify`): `active` when work starts, `completed` in
@@ -27,4 +31,4 @@ in `docs/README.md`, and the ticket template and Tusk calls in `tickets/README.m
 - Link to a fact's home instead of repeating it: `VISION.md`, `CONVENTIONS.md`, `docs/`, doc
   comments, `tickets/` (K8).
 - Run `tusk_doctor` after changing these files. It reports misplaced tickets, specs or plans
-  under `docs/`, and links to files that are gone.
+  under `docs/`, links to files that are gone, and tickets whose points break K9.
