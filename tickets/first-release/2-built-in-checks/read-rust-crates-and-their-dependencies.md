@@ -1,7 +1,9 @@
 ---
 type: ticket
 title: Read Rust crates and their dependencies
-blocks: tickets/first-release/2-built-in-checks/read-rust-imports
+blocks:
+  - tickets/first-release/2-built-in-checks/read-rust-imports
+  - tickets/first-release/2-built-in-checks/check-that-rust-crates-inherit-the-workspace-lints
 parent: tickets/first-release/2-built-in-checks/story
 points: 3
 priority: medium

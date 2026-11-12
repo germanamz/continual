@@ -1,7 +1,9 @@
 ---
 type: ticket
 title: Prepare the crates for crates.io
-blocks: tickets/first-release/6-releases/publish-the-first-release
+blocks:
+  - tickets/first-release/6-releases/publish-the-first-release
+  - tickets/first-release/6-releases/propose-releases-with-release-please
 parent: tickets/first-release/6-releases/story
 points: 2
 priority: medium

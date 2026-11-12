@@ -1,7 +1,7 @@
 ---
 type: ticket
 title: Check the pinned version
-blocks: tickets/first-release/1-pipeline/run-steps-from-the-command-line
+blocks: tickets/first-release/1-pipeline/run-pipelines-from-the-command-line
 parent: tickets/first-release/1-pipeline/story
 points: 1
 priority: high

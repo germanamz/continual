@@ -53,10 +53,10 @@ One term per concept (Q1). Reuse these words in code, tests and docs.
 | Check | One of Continual's own inspections, such as `comments`, which a step runs and which either passes or reports findings. Named by a check name (`CheckName`). |
 | Check name | The lowercase, hyphenated name of a check, such as `comments` (`CheckName`). |
 | Finding | One violation a check reports, located as `path:line: message`. |
-| Step | One node of the pipeline, declared by name in `continual.toml`: a tool to run, or checks to run in order, after the steps it depends on. |
-| Required step | A step whose failure skips every step downstream of it. A step is required unless configured otherwise. |
-| Pipeline | The graph of a repository's steps and their dependencies, run the same way locally and in CI. |
-| Event | A moment, such as a commit or the end of an agent's turn, that runs the steps a repository maps to it. |
+| Step | A named definition in `continual.toml` of what to run: a tool, or checks to run in order. A step never says what it depends on. |
+| Required step | A step whose failure skips every step downstream of it in its pipeline. A pipeline's steps are required unless it says otherwise. |
+| Pipeline | A named graph in `continual.toml` of the steps to run and what each waits for, run the same way locally and in CI. A pipeline can depend on other pipelines. |
+| Event | A moment, such as a commit or the end of an agent's turn, that runs the pipelines a repository maps to it. |
 | Package | A directory with its own `continual.toml`, extending the root one, in a repository that has several. |
 | Tool | An existing program a step runs, such as a formatter, linter, test runner or coverage tool. Continual runs tools and passes their output through; it never reimplements them. |
 | Gate | A step or check that blocks a change until it passes, or until a contributor approves it. |

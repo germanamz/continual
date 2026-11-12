@@ -15,8 +15,8 @@ status: pending
 ## Goal
 
 Add the `ToolRunner` port and the use case that drives a `Run` through it: start every ready
-tool step up to the job limit, wait for the next completion, record it, and repeat until
-nothing is running or ready, stopping every tool when asked.
+tool entry up to the job limit, take each output line and each completion as the runner hands
+it back, and repeat until nothing is running or ready, stopping every tool when asked.
 
 ## Design
 
@@ -25,11 +25,14 @@ The use-case loop in [Pipeline: core](../../../docs/pipeline.md#core) and the `T
 
 ## Behaviours to test
 
-- Independent ready steps start together, never more than the job limit at once.
+- Independent ready entries start together, never more than the job limit at once across
+  every pipeline of the run.
 - Each step's command, directory and time limit reach the runner as the configuration gives
   them.
+- Output lines are taken as the runner hands them back, each with its entry and stream, while
+  other tools keep running.
 - A completion with a timed-out, killed or missing outcome is recorded as the `Run` defines.
-- Asking the run to stop stops every running tool, marks every step not started as skipped,
+- Asking the run to stop stops every running tool, marks every entry not started as skipped,
   and gives exit code 130.
 - `ToolRunner` is documented per P5, and the fake passes its contract suite.
 

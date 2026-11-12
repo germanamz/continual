@@ -15,16 +15,16 @@ status: pending
 
 ## Goal
 
-Let a repository declare its steps in a root `continual.toml` and run them with
-`continual run`, as a graph whose required failures skip their downstream and whose tools
-never run without a time limit, the same way on every machine and in CI
+Let a repository declare its steps and its pipelines in a root `continual.toml` and run the
+pipelines with `continual run`, each a graph whose required failures skip their downstream and
+whose tools never run without a time limit, the same way on every machine and in CI
 ([pipeline](../../../VISION.md#pipeline), [tools](../../../VISION.md#tools)).
 
 ## Design
 
 - [Pipeline: `continual.toml`](../../../docs/pipeline.md#continualtoml),
   [commands](../../../docs/pipeline.md#commands), [timeouts](../../../docs/pipeline.md#timeouts),
-  [the graph](../../../docs/pipeline.md#the-graph) and
+  [pipelines](../../../docs/pipeline.md#pipelines) and
   [output and exit codes](../../../docs/pipeline.md#output-and-exit-codes).
 - [Pipeline: core](../../../docs/pipeline.md#core),
   [ports and adapters](../../../docs/pipeline.md#ports-and-adapters) and
@@ -39,5 +39,6 @@ Each child ticket lists the behaviours it adds. List the children with the query
 ## Done when
 
 - Every child ticket is completed.
-- `continual run <step>...` works on a single-package repository with tool and group steps.
+- `continual run <pipeline>...` works on a single-package repository with tool steps and
+  pipelines that depend on other pipelines.
 - The design documents describe the change, and its planned markers are gone.

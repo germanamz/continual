@@ -12,25 +12,28 @@ status: pending
 
 ## Goal
 
-Give the core the `pipeline` module's `Run`: a pure state machine that plans the steps asked
-for and everything upstream, says which steps are ready, records each outcome, skips the
-downstream of a failed required step, and ends with a verdict. No port is involved yet.
+Give the core the `pipeline` module's `Run`: a pure state machine that plans the pipelines
+asked for and the pipelines they depend on, says which entries are ready, records each outcome,
+skips the downstream of a failed required entry and the pipelines that depend on a failed one,
+and ends with a verdict. No port is involved yet.
 
 ## Design
 
 The `pipeline` module in [Pipeline: core](../../../docs/pipeline.md#core),
-[the graph](../../../docs/pipeline.md#the-graph) and the exit-code table in
+[pipelines](../../../docs/pipeline.md#pipelines) and the exit-code table in
 [output and exit codes](../../../docs/pipeline.md#output-and-exit-codes).
 
 ## Behaviours to test
 
-- A run includes the steps asked for and every step upstream of them, and nothing else.
-- A step is ready only once every step it depends on has finished.
-- A failed required step skips every step downstream of it, transitively.
-- A failed step with `required = false` is reported, and its dependents still become ready.
+- A run includes the pipelines asked for and every pipeline they depend on, and nothing else.
+- A pipeline's entries become ready only once every pipeline it depends on has passed, and an
+  entry only once every entry it depends on has finished.
+- A failed required entry skips every entry downstream of it in its pipeline, transitively.
+- A failed entry with `required = false` is reported, and its dependents still become ready.
+- A failed pipeline skips every pipeline that depends on it.
+- A step listed in two pipelines of the run runs once for each.
 - A timed-out or killed tool counts as failed; a missing program counts as could-not-run.
-- A group step passes once its dependencies finish.
-- The verdict names every failed step in the order they failed and every skipped step, and
+- The verdict names every failed entry in the order they failed and every skipped entry, and
   maps to exit code 0, 1 or 2 as the design's table says.
 
 ## Done when

@@ -25,6 +25,8 @@ output sent back to the agent as the hook's feedback.
 
 - An edit whose mapped steps fail returns their output to the agent as feedback; one whose
   steps pass returns nothing; the edit is never undone.
+- The `stop` hook answers only once every pipeline of `on_agent_turn_end` has finished, so the
+  turn never ends on checks still running.
 - A failing `on_agent_turn_end` blocks the first stop with its output, and a second stop in the
   same turn goes through.
 - Guard findings never block a stop.

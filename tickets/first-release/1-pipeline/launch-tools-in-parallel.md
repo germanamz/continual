@@ -3,7 +3,7 @@ type: ticket
 title: Launch tools in parallel
 blocks:
   - tickets/first-release/1-pipeline/launch-tools-with-time-limits
-  - tickets/first-release/1-pipeline/run-steps-from-the-command-line
+  - tickets/first-release/1-pipeline/run-pipelines-from-the-command-line
 parent: tickets/first-release/1-pipeline/story
 points: 3
 priority: high
@@ -15,7 +15,7 @@ status: pending
 ## Goal
 
 Implement `ToolRunner` in the `continual-process` adapter: launch several tools at once and
-hand back each one's outcome and captured output as it finishes.
+hand back each line they write and each one's outcome as it happens.
 
 ## Design
 
@@ -25,12 +25,14 @@ hand back each one's outcome and captured output as it finishes.
 ## Behaviours to test
 
 - The `ToolRunner` contract suite passes against the adapter, apart from time limits.
-- A tool runs in the directory it is given, with Continual's environment, and its standard
-  output and error are captured together, byte for byte, including output that is not UTF-8.
+- A tool runs in the directory it is given, with Continual's environment.
+- Each line a tool writes is handed back as soon as it ends, byte for byte, with its stream:
+  standard output and standard error stay apart, and output that is not UTF-8 is kept as is.
 - A tool's standard input is closed, so a tool that reads it ends instead of waiting.
 - A program that is not on the `PATH` is reported as missing, not as a failed run; on Windows
   the lookup finds `.exe` and the other `PATHEXT` extensions.
-- Several tools run at the same time, and each completion is handed back as it happens.
+- Several tools run at the same time, and their lines and completions are handed back as they
+  happen.
 
 ## Done when
 

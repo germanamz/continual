@@ -11,7 +11,7 @@ The rules for both are K1 to K9 in
 | [Workspace](workspace.md) | The crates, their roles, how the architecture maps onto them, and their shared configuration. |
 | [Checks](checks.md) | Lints, the `cargo xtask` checks, tests, coverage, mutation testing, supply chain, commit messages, git hooks and CI. |
 | [Workflow](workflow.md) | How a change goes from idea to merged pull request: design documents, tickets, agent rules, the review gate, Claude Code hooks and Tusk. |
-| [Pipeline](pipeline.md) | `continual.toml`, steps and their graph, timeouts, runs, output and exit codes, packages, events and placeholders. |
+| [Pipeline](pipeline.md) | `continual.toml`, steps, pipelines and their graphs, timeouts, runs, output and exit codes, packages, events and placeholders. |
 | [Built-in checks](built-in-checks.md) | Continual's own checks (comments, architecture, guard, commit messages) and the language adapters behind them. |
 | [Harness](harness.md) | The Claude Code mod: agent events, the review gate and blocked commands. |
 | [Distribution](distribution.md) | How Continual is installed and released. |

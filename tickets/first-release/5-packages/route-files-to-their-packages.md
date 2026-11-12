@@ -1,7 +1,7 @@
 ---
 type: ticket
 title: Route files to their packages
-blocks: tickets/first-release/5-packages/run-a-step-in-every-package
+blocks: tickets/first-release/5-packages/run-a-pipeline-in-every-package
 parent: tickets/first-release/5-packages/story
 points: 2
 priority: medium
@@ -24,8 +24,8 @@ package rules in [Pipeline: events](../../../docs/pipeline.md#events).
 
 - A file belongs to the deepest package that contains it, and the root owns every file outside
   the listed packages.
-- An event runs a package's steps only when the package owns one of its files, with only those
-  files in its `{files}`; the root's steps run on every event.
+- An event runs a package's pipelines only when the package owns one of its files, with only
+  those files in its `{files}`; the root's pipelines run on every event.
 - A per-file check in a root step inspects only the files the root owns.
 
 ## Done when

@@ -29,10 +29,10 @@ commit, a push, a pull-request creation or a merge, and answer "ask" for the act
   `git -C <dir>` and a full path to the program.
 - In a chain of segments, any gated segment makes the command gated.
 - A recogniser in `[review_gate.commands]` adds a tool, such as `glab mr create`.
-- A gated action listed in `ask` is answered "ask"; one left out of `ask` is allowed; the
+- A gated action listed in `ask` is answered `ask`; one left out of `ask` is answered `pass`; the
   default `ask` lists all four.
 - An unknown gated action in `ask` is a configuration error.
-- Ordinary commands are allowed.
+- Ordinary commands are answered `pass`, never `allow`, so the harness's own rules decide.
 
 ## Done when
 

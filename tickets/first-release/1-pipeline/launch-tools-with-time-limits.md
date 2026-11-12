@@ -24,7 +24,7 @@ with every process it started, so a hung tool never hangs a run.
 
 - The `ToolRunner` contract suite passes in full, time limits included.
 - A tool that runs past its limit is asked to stop, then killed after 10 seconds, and is
-  reported as timed out with the output it produced.
+  reported as timed out, every line it wrote having been handed back already.
 - A tool that starts child processes has its children stopped with it.
 - A tool that finishes within its limit is unaffected.
 

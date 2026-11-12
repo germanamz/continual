@@ -1,7 +1,7 @@
 ---
 type: ticket
 title: Declare packages in the root configuration
-blocks: tickets/first-release/5-packages/inherit-shared-steps-in-packages
+blocks: tickets/first-release/5-packages/inherit-shared-steps-and-pipelines
 parent: tickets/first-release/5-packages/story
 points: 3
 priority: medium

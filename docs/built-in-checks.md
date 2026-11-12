@@ -33,7 +33,6 @@ Check, check name, finding, language and guarded change mean what the
 
 ```toml
 [steps.conventions]
-required = false
 
 [[steps.conventions.checks]]
 check = "comments"
@@ -68,8 +67,21 @@ No comment blocks, no block comments and no commented-out code; explanations go 
 comments. The check reports a blob of two or more consecutive lines that hold only a non-doc
 line comment once, with its length; any block comment, a nested one counting once; and a line
 comment that reads as code. Doc comments are never reported, comment markers inside strings are
-never comments, and CRLF files are checked like LF files. For Rust, a comment that reads as code
-is one that ends in `;`, `{` or `}`, as today.
+never comments, and CRLF files are checked like LF files. Which comments read as code is the
+language adapter's to say, since each language writes code differently: the Rust adapter marks
+a comment that ends in `;`, `{` or `}`, as `xtask` does today.
+
+### Language-specific checks
+
+A rule that only makes sense in one language is a check of its own, named for its language,
+and a repository runs it in a step of its own, so the graph keeps it apart from the checks
+every language shares. A repository without that language never lists it.
+
+- **`rust-workspace-lints`**: every crate inherits the workspace lints with
+  `[lints] workspace = true`, as the `xtask` arch check requires today.
+
+Its rule is core code like every other check's, over facts that only that language's adapter
+reports.
 
 ### Architecture
 
@@ -197,10 +209,12 @@ in (M5). Findings are the core's `Finding` values, labelled with the check's `Ch
   `GIT_TERMINAL_PROMPT=0` and a fixed time limit of its own (A3), and reports a git command that
   times out as an error, so a credential prompt or a stuck repository makes a check
   could-not-run instead of hanging.
-- `LanguageSyntax` is pure: text in, facts out, with no file system and no processes. Each
-  adapter states the file extensions and manifest names it handles, and the core chooses the
-  adapter by extension. The composition root registers every language adapter compiled into
-  the binary.
+- `LanguageSyntax` is pure: text in, facts out, with no file system and no processes. Like
+  tree-sitter's queries, it speaks in generic concepts (comment, comment that reads as code,
+  import, test, lint suppression, unit, dependency) and each language adapter fills them in from
+  its own syntax. Each adapter states the file extensions and manifest names it handles, and
+  the core chooses the adapter by extension. The composition root registers every language
+  adapter compiled into the binary.
 - The `rust` adapter lexes comments with `ra-ap-rustc_lexer`, reads imports, tests and
   suppressions with `syn`, and reads crates and their dependencies from `Cargo.toml`
   manifests with `toml`, the libraries `xtask` uses today.
@@ -209,9 +223,16 @@ in (M5). Findings are the core's `Finding` values, labelled with the check's `Ch
 
 ## Decisions
 
-- **Built-in checks are steps.** They sit in the graph like tools, with dependencies and
+- **Built-in checks are steps.** They sit in pipelines like tools, with dependencies and
   `required`, and a step can run several of them. Rejected: a separate section for Continual's
   own checks, which would give them a second scheduling model.
+- **Generic concepts, filled in by each language's adapter.** The core knows comments, code,
+  imports, tests and units; what each looks like in a language is the adapter's to say, as a
+  tree-sitter grammar fills in a query. Rejected: recognising code in comments with one
+  pattern for every language, which only fits the languages that end statements in `;`.
+- **A language-only rule is its own check, in its own step.** It runs only where the language
+  is, and the pipeline keeps it apart from the shared checks. Rejected: language-specific
+  options on a shared check, which give a shared rule settings that most languages ignore.
 - **"Check", not "rule".** A rule is a convention with an ID such as B1, which a check
   enforces, so the configuration key is `check`. Rejected: `rule = "comments"`, which gives
   one word two meanings.
@@ -237,9 +258,3 @@ in (M5). Findings are the core's `Finding` values, labelled with the check's `Ch
   behind a port, which adds a port with no external actor (P4).
 - **Attribution is on by default.** A repository that wants AI attribution in its history says
   so with `attribution = false`.
-
-## Open questions
-
-- How a comment that reads as code is recognised in languages other than Rust.
-- Where rules that only make sense in one language live, such as every Rust crate inheriting
-  the workspace lints.

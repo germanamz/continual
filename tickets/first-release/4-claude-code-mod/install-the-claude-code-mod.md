@@ -17,21 +17,22 @@ enough that Claude Code never cuts a hook off before Continual's own limits act.
 
 ## Design
 
-[Harness: installing the mod](../../../docs/harness.md#installing-the-mod), the installer notes in
-[Harness: design](../../../docs/harness.md#design), and the hook-timeout question in
-[Harness: open questions](../../../docs/harness.md#open-questions).
+[Harness: installing the mod](../../../docs/harness.md#installing-the-mod) and the installer
+notes in [Harness: design](../../../docs/harness.md#design).
 
 ## Behaviours to test
 
 - Into a settings file with other hooks and settings, Continual adds its own hooks and changes
   nothing else.
-- Running it again changes nothing.
+- Running it again changes nothing; after the configuration changes, it brings the timeouts up
+  to date.
 - Without a settings file, it creates one.
 - Each hook entry calls `continual hook claude <hook>` for the hooks the design's table lists.
+- Each hook entry that runs an event has a timeout of at least the sum of the timeouts of the
+  steps in that event's pipelines.
 
 ## Done when
 
-- The hook-timeout open question in docs/harness.md is decided and removed.
 - The design documents describe the change, and the planned markers of
   [Hold the review gate in the Claude Code mod](story.md)
   are gone.

@@ -2,13 +2,14 @@
 
 > Planned: [Hold the review gate in the Claude Code mod](../tickets/first-release/4-claude-code-mod/story.md)
 
-How Continual plugs into agent harnesses, starting with Claude Code. The harness mod formats
+How Continual plugs into an agent harness: Claude Code, the only harness planned. The harness
+mod formats
 and checks each file an agent edits, runs the quick checks before an agent's turn ends, blocks
 commands that skip checks, and holds the review gate: an agent commits, pushes or opens a pull
 request only when a contributor asks, unless the contributor allows it
 ([harness mods](../VISION.md#harness-modsplugins)). Every behaviour lives in the `continual`
 binary and is configured in `continual.toml`; the mod is generated wiring that calls it. Which
-steps run is the [pipeline](pipeline.md#events)'s business. This repository's own review gate,
+pipelines run is the [pipeline](pipeline.md#events)'s business. This repository's own review gate,
 which these behaviours generalise, is in [Workflow](workflow.md#the-review-gate).
 
 ## Concepts
@@ -21,8 +22,9 @@ Contributor, wave and allowance mean what [Workflow](workflow.md#concepts) says.
   settings.
 - **Gated action**: a commit, a push, a pull-request creation or a merge.
 - **Bypass**: a command that skips or disables checks, such as `git commit --no-verify`.
-- **Gate decision**: what Continual answers about a command an agent wants to run: allow, ask
-  the contributor, or block, with the reason.
+- **Gate decision**: what Continual answers about a command an agent wants to run: `allow`,
+  which overrides the harness's own permission rules; `pass`, which raises no objection and
+  leaves those rules to decide; `ask` the contributor; or `block`, with the reason.
 
 ## Behaviour
 
@@ -38,7 +40,12 @@ entry that is not Continual's. Running it again changes nothing. Each hook runs
 | `PostToolUse` on Edit and Write | Runs the `on_agent_file_edit` event with the edited file and sends failures back to the agent. |
 | `PostToolUse` on Bash | Opens a wave when an approved commit or push has run. |
 | `UserPromptSubmit` | Closes the wave, and reads `/allow` in the contributor's message. |
-| `Stop` | Runs the `on_agent_turn_end` event. |
+| `Stop` | Runs the `on_agent_turn_end` event and waits for it before the turn ends. |
+
+Each hook entry gets a timeout long enough for its event's whole run: the sum of the timeouts
+of the steps in the event's pipelines. Claude Code therefore never cuts a hook off before
+Continual's own limits stop a hung tool. Running `continual install claude` again after the
+configuration changes brings the timeouts up to date.
 
 When the configuration cannot be loaded or pins another version, the gate still answers, with
 the built-in rules alone: the default `ask` list and the built-in bypasses. It says so, so the
@@ -48,6 +55,10 @@ blocked. The other hooks warn and let the agent continue.
 
 ### Agent events
 
+- Continual waits for the `on_agent_turn_end` checks to finish before the agent's turn ends.
+  The end of the agent's turn, when it hands back to the contributor, is the one moment that
+  reliably marks finished work, so the checks run there in full even when that makes the turn
+  end later: quality comes before speed.
 - After an edit, the event's output goes back to the agent as the hook's feedback when a step
   fails, so the agent fixes the file. The edit itself is never undone.
 - Before the turn ends, a failing `on_agent_turn_end` blocks the stop once and shows the
@@ -77,6 +88,10 @@ ask = ["commit", "push", "pull-request", "merge"]
   path to `git`, an `env` prefix, a subshell, or a command chained with `&&`, `;` or a pipe.
   Git commits and pushes, and pull requests through `gh`, are recognised by default, and
   `[review_gate.commands]` adds recognisers for other tools, such as `glab mr create`.
+- Continual answers `allow` only for a gated action that the contributor's explicit `/allow`
+  covers, and that answer overrides an `ask` rule the contributor keeps in Claude Code's own
+  settings. Inside a wave, and for every command that is neither gated nor a bypass, it answers
+  `pass`, so Claude Code's own permission rules still decide.
 
 ### Blocked commands
 
@@ -139,17 +154,14 @@ allowance too.
   guard reports changes to those files instead.
 - **The guard's approval label is blocked automatically.** It comes from the guard's settings,
   so it is written once and cannot be forgotten in `[[blocked_commands]]`.
+- **The turn-end checks run in full before the turn ends.** The agent hands back to the
+  contributor only with checked work, at the cost of slower turns. Rejected: running them in
+  the background, and cutting them off at a short hook timeout, either of which lets a turn end
+  on unchecked work.
+- **Only an explicit allowance overrides the harness's own rules.** A contributor's `ask` rules
+  in Claude Code give way only to their own `/allow`. Rejected: answering `allow` to every
+  command Continual has no objection to, which would silently lift those rules.
 - **Allowances end with the session.** They come from the contributor's messages, as in
   [Workflow](workflow.md#decisions). Rejected: allowing actions in `continual.toml` for every
   session, beyond leaving an action out of `ask`, which a repository decides for everyone.
 
-## Open questions
-
-- Which harness comes second, and whether its hooks can express every gate decision.
-- How the timeout `continual install claude` writes on each hook entry follows the timeouts of
-  the steps its event runs, so the harness does not cut a hook off before Continual's own
-  limits stop a hung tool.
-- Whether an `allow` gate decision overrides the `ask` permission rules a contributor keeps in
-  Claude Code's own settings, the question
-  [Let a contributor allow commits, pushes and pull requests](../tickets/let-a-contributor-allow-commits-pushes-and-pull-requests.md)
-  answers for this repository's hooks.

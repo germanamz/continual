@@ -149,9 +149,12 @@ check, and `pre-push` runs `cargo xtask ci`.
 > Planned: [Check Continual with a pinned release](../tickets/first-release/7-self-hosting/story.md)
 
 Continual checks its own repository. A root `continual.toml` declares the steps that
-`cargo xtask ci` runs today, the [built-in checks](built-in-checks.md) take over from the
-comments, arch, guard and attribution checks in `xtask`, and the Claude Code hooks and git
-hooks become the [harness mod](harness.md) and `continual event` calls.
+`cargo xtask ci` runs today and a `ci` pipeline that runs them in the same order, every entry
+required, so the first failure stops the run as it does now. The
+[built-in checks](built-in-checks.md) take over from the comments, arch, guard and attribution
+checks in `xtask`, and the Claude Code hooks and git hooks become the [harness mod](harness.md)
+and `continual event` calls. The pipeline starts as what `xtask` hardcodes and changes as
+Continual is built.
 
 - **The gate is a pinned release.** CI, the git hooks and the harness mod run the released
   `continual` whose version `continual.toml` pins ([Pipeline](pipeline.md#continualtoml)).
@@ -200,12 +203,5 @@ hooks become the [harness mod](harness.md) and `continual event` calls.
   Clippy's. Rejected: gating with the working-tree build and relying on the guard to flag
   changes to the check code.
 - **The `xtask` pipeline stays linear until it retires.** Choosing which failures stop a run is
-  the `required` setting of Continual's [pipeline](pipeline.md#the-graph), so `xtask` does not
+  the `required` setting of Continual's [pipeline](pipeline.md#pipelines), so `xtask` does not
   grow its own version first.
-
-## Open questions
-
-- Which of this repository's steps set `required = false`, for example the static checks
-  before the tests, so that one run reports all of their failures.
-  [Check Continual with a pinned release](../tickets/first-release/7-self-hosting/story.md)
-  decides it.

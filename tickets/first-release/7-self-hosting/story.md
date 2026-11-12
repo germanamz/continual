@@ -31,5 +31,4 @@ the pinned release covers it.
 
 - Every child ticket is completed.
 - `cargo xtask ci` is no longer the gate, and the moved checks are gone from `xtask`.
-- The open question on placeholders for CI inputs in docs/pipeline.md is decided and removed.
 - The design documents describe the change, and its planned markers are gone.

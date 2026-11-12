@@ -11,15 +11,19 @@ every time, on every machine and in CI.
 ### Pipeline
 
 A repository declares its steps in one `continual.toml`, each by name, like the scripts of a
-`package.json`, and says which steps each one depends on. Continual runs them as a graph:
-steps that do not depend on each other run at the same time, and a failing step that is
-required skips every step downstream of it. In a monorepo, each package's `continual.toml`
-extends the root one, and a step can depend on another package's step. The pipeline that runs
-locally is the one CI runs, so a change that passes on a contributor's machine passes in CI.
-When a tool a step needs is missing, Continual prints the command that installs it.
+`package.json`, and declares its pipelines apart from them: which steps each pipeline runs and
+what each step waits for, so the same steps can run along different paths, such as a full CI
+run and a quick check before an agent's turn ends. Continual runs each pipeline as a graph:
+steps that do not wait for each other run at the same time, and a failing step that is
+required skips every step downstream of it. A pipeline can depend on other pipelines. In a
+monorepo, each package's `continual.toml` extends the root one, and a pipeline can depend on
+another package's pipeline. The pipelines that run locally are the ones CI runs, so a change
+that passes on a contributor's machine passes in CI. When a tool a step needs is missing,
+Continual prints the command that installs it.
 
 Continual is an orchestrator, not a build system: it never caches, and every step runs each
-time it is asked for, leaving incremental work to the tools.
+time it is asked for, leaving incremental work to the tools. It passes each tool's output
+through as the tool writes it and reports every failure by its exit code.
 
 ### Checks
 

@@ -17,14 +17,14 @@ request, so an interrupted run leaves nothing behind.
 
 ## Design
 
-The Ctrl-C bullet in [Pipeline: timeouts](../../../docs/pipeline.md#timeouts) and the `process` notes
-in [ports and adapters](../../../docs/pipeline.md#ports-and-adapters).
+The Ctrl-C bullet in [Pipeline: timeouts](../../../docs/pipeline.md#timeouts) and the `process`
+notes in [ports and adapters](../../../docs/pipeline.md#ports-and-adapters).
 
 ## Behaviours to test
 
 - A stop request asks every running tool to stop and kills what is left after 10 seconds.
 - Each stopped tool's children stop with it.
-- Each stopped tool is handed back as killed, with its output so far.
+- Each stopped tool is handed back as killed.
 
 ## Done when
 

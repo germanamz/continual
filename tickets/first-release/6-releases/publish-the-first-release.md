@@ -11,8 +11,8 @@ status: pending
 
 ## Goal
 
-Publish the first Continual release to crates.io and GitHub, so `cargo install continual` and
-the downloaded executable both work and a repository can pin it.
+Merge the first release pull request, so the workflows tag, build and publish Continual's first
+release, and `cargo install continual` and the downloaded executable both work.
 
 ## Design
 
@@ -26,6 +26,6 @@ the downloaded executable both work and a repository can pin it.
 
 ## Done when
 
-- The contributor has tagged and published the release; publishing is theirs to do.
+- The contributor has merged the first release pull request; releasing is theirs to do.
 - The design documents describe the change, and the planned markers of
   [Publish Continual releases](story.md) are gone.

@@ -12,8 +12,8 @@ status: pending
 
 ## Goal
 
-Write this repository's root `continual.toml` with every step `cargo xtask ci` runs, and add
-the CI dogfood job that runs the working-tree build of `continual` on it with `--unpinned`,
+Write this repository's root `continual.toml` with every step `cargo xtask ci` runs and a `ci`
+pipeline that runs them as `xtask` hardcodes today, and add the CI dogfood job that runs the working-tree build of `continual` on it with `--unpinned`,
 while `cargo xtask` stays the gate.
 
 ## Design
@@ -23,12 +23,10 @@ while `cargo xtask` stays the gate.
 ## Behaviours to test
 
 - `cargo run --package continual -- run ci --unpinned` runs every step `cargo xtask ci` runs,
-  in an order the graph allows, and fails on the same fixture violations.
+  in the same order, and fails on the same fixture violations.
+- Every entry of `ci` is required, so the first failure stops the run as `cargo xtask ci` does.
 - The dogfood job is required in CI, and `cargo xtask ci` still gates.
-- The steps that set `required = false` are named, closing the open question in
-  docs/checks.md.
 
 ## Done when
 
-- The open question in docs/checks.md is decided and removed.
-- The placeholders question in docs/pipeline.md is decided for the steps this file needs.
+- The CI inputs the steps need reach them as the flags `cargo xtask` takes today.

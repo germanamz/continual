@@ -1,7 +1,7 @@
 ---
 type: ticket
 title: Read continual.toml
-blocks: tickets/first-release/1-pipeline/run-steps-from-the-command-line
+blocks: tickets/first-release/1-pipeline/run-pipelines-from-the-command-line
 parent: tickets/first-release/1-pipeline/story
 points: 3
 priority: high
@@ -32,6 +32,8 @@ or value at its line.
 - `run` is split into words like a shell would split them, with single and double quotes
   grouping words, and `{files}` and `{message_file}` kept as placeholder tokens; an unclosed
   quote is a configuration error.
+- `[steps]` and `[pipelines]` are read with their inline entry tables, each entry's
+  `depends_on` and `required` included.
 - CRLF line endings read the same as LF.
 
 ## Done when

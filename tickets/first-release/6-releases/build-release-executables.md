@@ -12,8 +12,9 @@ status: pending
 
 ## Goal
 
-Build the prebuilt `continual` executables for every platform the distribution design lists,
-with checksums, from a `v<version>` tag.
+When release-please creates a release, build the prebuilt `continual` executables for every
+platform the distribution design lists, attach them with their checksums, and publish the
+product crates to crates.io.
 
 ## Design
 
@@ -22,12 +23,12 @@ with checksums, from a `v<version>` tag.
 
 ## Behaviours to test
 
-- A release build produces `continual` for Linux x86-64 and ARM64, macOS x86-64 and ARM64,
-  and Windows x86-64, each with a SHA-256 checksum.
+- A created release builds `continual` for Linux x86-64 and ARM64, macOS x86-64 and ARM64,
+  and Windows x86-64, and attaches each with a SHA-256 checksum.
 - Each executable runs `continual --version` on a machine with nothing else installed.
-- The workflow runs on a tag and can be tried without publishing.
+- The product crates are published in dependency order at the release's version.
+- The workflow can be tried without publishing.
 
 ## Done when
 
-- The open question in docs/distribution.md is decided and removed.
 - Third-party actions are pinned to full commit SHAs, like the other workflows.

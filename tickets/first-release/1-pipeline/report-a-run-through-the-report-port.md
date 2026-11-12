@@ -12,19 +12,21 @@ status: pending
 
 ## Goal
 
-Add the `Report` port and have the run use case tell it when each step starts, when each
-finishes with its outcome and captured output, and the verdict at the end.
+Add the `Report` port and have the run use case pass every output line to it as the line
+arrives, tell it why each failed entry failed, and give it the verdict at the end.
 
 ## Design
 
-The `Report` row in [Pipeline: ports and adapters](../../../docs/pipeline.md#ports-and-adapters) and
-[output and exit codes](../../../docs/pipeline.md#output-and-exit-codes).
+The `Report` row in [Pipeline: ports and adapters](../../../docs/pipeline.md#ports-and-adapters)
+and [output and exit codes](../../../docs/pipeline.md#output-and-exit-codes).
 
 ## Behaviours to test
 
-- `Report` hears every step start and finish, in the order they happen, with each step's
-  package, outcome and output.
-- A skipped step is reported as skipped, with the failed step that caused it.
+- Each output line reaches `Report` as it arrives, with its entry, package and stream, before
+  the tool finishes.
+- A failed entry is reported with its reason: the tool's exit code, its timeout, or why it
+  could not run.
+- A skipped entry is reported as skipped, with the failure that caused it.
 - The verdict is reported once, last.
 - `Report` is documented per P5, and the fake passes its contract suite.
 

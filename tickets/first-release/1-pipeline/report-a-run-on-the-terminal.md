@@ -1,7 +1,7 @@
 ---
 type: ticket
 title: Report a run on the terminal
-blocks: tickets/first-release/1-pipeline/run-steps-from-the-command-line
+blocks: tickets/first-release/1-pipeline/run-pipelines-from-the-command-line
 parent: tickets/first-release/1-pipeline/story
 points: 2
 priority: high
@@ -12,8 +12,8 @@ status: pending
 
 ## Goal
 
-Implement `Report` in the `continual-terminal` adapter, writing a run's progress, each step's
-output and the verdict to the output it is given.
+Implement `Report` in the `continual-terminal` adapter: pass every output line through as it
+arrives, say why each failed step failed, and end with the verdict, on the outputs it is given.
 
 ## Design
 
@@ -23,11 +23,14 @@ output and the verdict to the output it is given.
 ## Behaviours to test
 
 - The `Report` contract suite passes against the adapter.
-- A step's start prints one line naming the step and its package.
-- A finished step prints its output whole under one line with its outcome, so two steps'
-  output never interleaves.
-- The last line names every failed and skipped step.
-- Given a buffer instead of standard output, the adapter writes the same text into it.
+- A tool's standard output lines go to standard output and its standard error lines to
+  standard error, as they arrive and otherwise unchanged.
+- In a run of more than one entry, each line carries the step's name as a prefix, such as
+  `test | `, and its package in a monorepo; a run of one entry passes lines through bare.
+- A failed step prints one line with its reason, such as `test failed: exit code 101`.
+- The last line names every failed and skipped entry.
+- Given buffers instead of standard output and error, the adapter writes the same text into
+  them.
 
 ## Done when
 

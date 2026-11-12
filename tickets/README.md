@@ -24,7 +24,7 @@ tickets/
     ├── epic.md                   Self-host Continual on its first release
     ├── 1-pipeline/
     │   ├── story.md              Run a repository's steps from continual.toml
-    │   ├── validate-the-step-graph.md
+    │   ├── validate-step-definitions.md
     │   └── …
     ├── 2-built-in-checks/
     └── …
