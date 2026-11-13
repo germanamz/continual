@@ -10,10 +10,20 @@ every time, on every machine and in CI.
 
 ### Pipeline
 
-Continual runs a repository's checks in a fixed order and stops at the first configured failure.
-The pipeline that runs locally is the one CI runs, so a change that passes on a contributor's
-machine passes in CI. When a tool a check needs is missing, Continual prints the command that
-installs it.
+A repository declares its steps in one `continual.toml`, each by name, like the scripts of a
+`package.json`, and declares its pipelines apart from them: which steps each pipeline runs, in
+the order written from the step that starts it, and what each step waits for, so the same steps can run along different paths, such as a full CI
+run and a quick check before an agent's turn ends. Continual runs each pipeline as a graph:
+steps that do not wait for each other run at the same time, and a failing step that is
+required skips every step downstream of it. A pipeline can depend on other pipelines. In a
+monorepo, each package's `continual.toml` extends the root one, and a pipeline can depend on
+another package's pipeline. The pipelines that run locally are the ones CI runs, so a change
+that passes on a contributor's machine passes in CI. When a tool a step needs is missing,
+Continual prints the command that installs it.
+
+Continual is an orchestrator, not a build system: it never caches, and every step runs each
+time it is asked for, leaving incremental work to the tools. It passes each tool's output
+through as the tool writes it and reports every failure by its exit code.
 
 ### Checks
 
@@ -24,9 +34,10 @@ check fails when what it checks is missing.
 
 ### Tools
 
-Continual runs the repository's existing tools as checks and holds their results to the
-repository's thresholds, such as a minimum coverage or no missed mutants in mutation testing.
-Which tools run, with which arguments, is the repository's configuration.
+Continual runs the repository's existing tools as steps, passes their output through untouched
+and judges each one by its exit code. Which tools run, with which arguments, is the
+repository's configuration, and so are the thresholds the tools enforce, such as a minimum
+coverage or no missed mutants in mutation testing, set through the tools' own flags.
 
 ### Rules
 
@@ -50,13 +61,16 @@ knows its syntax and its tools; Rust is the first.
 ### Hooks
 
 The same checks run from git hooks, from CI and from agent harnesses, with one
-implementation behind all of them.
+implementation behind all of them. A repository maps moments such as a commit, an agent's
+file edit or the end of an agent's turn to the steps they run, and a step can receive the
+files the moment touched.
 
 ## Interfaces
 
 ### Humans
 
-- The `continual` command-line interface.
+- The `continual` command-line interface: a single executable, installed with cargo, built
+  from source or downloaded, which a repository pins to one release.
 
 ### AI
 

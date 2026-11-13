@@ -9,9 +9,8 @@ This document describes how the checks work and why they are built this way.
 ## Behaviour
 
 - `cargo xtask ci` runs every check in the order CI runs them: fmt, clippy, doc, comments,
-  arch, guard, nextest, doctests, coverage, deny, machete. It stops at the first failure, unless
-  the failing step is [configured to continue](#pipeline-failures). When a tool is missing, it
-  prints the command that installs it.
+  arch, guard, nextest, doctests, coverage, deny, machete. It stops at the first failure. When a
+  tool is missing, it prints the command that installs it.
 - A check prints each finding as `path:line: message`, so editors make it clickable. A check
   with findings exits with code 1. A check that cannot run, for example because the base ref
   is missing in a shallow clone, exits with code 2 and names the cause. It never reports
@@ -102,21 +101,6 @@ This document describes how the checks work and why they are built this way.
 - **`ci`** runs the pipeline. Its step list is data in `xtask/src/pipeline.rs`, so the order,
   the arguments and the required-tool table are tested.
 
-### Pipeline failures
-
-> Planned: [Configure which failures stop the pipeline](../tickets/configure-which-failures-stop-the-pipeline.md)
-
-Each step either stops the pipeline when it fails or lets it continue, and the pipeline stops
-at the first failure of a step that stops it. A step that continues prints its failure, and the
-steps after it run. Either way the pipeline fails when any step failed, and its last line names
-every failed step, in order. A step stops the pipeline unless it is configured to continue, so
-with no configuration the pipeline stops at the first failure.
-
-The setting is a field of each `Step` in `xtask/src/pipeline.rs`, so it is data and tested like
-the order and the arguments. It is the "first configured failure" of the
-[pipeline](../VISION.md#pipeline): the repository, not Continual, decides which failures end a
-run.
-
 ### Tests
 
 The tests run under cargo-nextest. Its `ci` profile in `.config/nextest.toml` turns off
@@ -160,6 +144,36 @@ check, and `pre-push` runs `cargo xtask ci`.
   `Swatinem/rust-cache`, install tools with `taiki-e/install-action` and pin third-party
   actions to full commit SHAs. A newer push cancels the running checks of the same pull request.
 
+### Self-hosting
+
+> Planned: [Check Continual with a pinned release](../tickets/first-release/7-self-hosting/story.md)
+
+Continual checks its own repository. A root `continual.toml` declares the steps that
+`cargo xtask ci` runs today and a `ci` pipeline that runs them in the same order, every entry
+required, so the first failure stops the run as it does now. The
+[built-in checks](built-in-checks.md) take over from the comments, arch, guard and attribution
+checks in `xtask`, and the Claude Code hooks and git hooks become the [harness mod](harness.md)
+and `continual event` calls. The pipeline starts as what `xtask` hardcodes and changes as
+Continual is built.
+
+- **The gate is a pinned release.** CI, the git hooks and the harness mod run the released
+  `continual` whose version `continual.toml` pins ([Pipeline](pipeline.md#continualtoml)).
+  Moving to a newer release is a change of its own, and a guarded one, since it changes
+  `continual.toml`.
+- **A dogfood job runs the working tree.** CI also builds `continual` from the pull request and
+  runs this repository's steps with it, with `--unpinned`, so a change that breaks Continual on
+  its own repository fails before anyone pins it. The job is required, and it is not the gate:
+  a change that weakens a check passes it, and still meets the pinned release's unweakened
+  check.
+- **The guard runs in its own job.** CI runs `continual guard --ci --labels <list>` with the
+  pull request's labels, as `pr-checks.yml` runs the `xtask` guard today
+  ([Built-in checks: guard](built-in-checks.md#guard)).
+- **New configuration waits for a release.** Both jobs read the same `continual.toml`, so this
+  repository uses a new configuration key only once a release that understands it is pinned,
+  as rustc uses a new language feature only once its stage0 compiler has it.
+- **`cargo xtask` stays the gate until the first release.** Each check moves out of `xtask`
+  once the released `continual` that replaces it is pinned.
+
 ## Decisions
 
 - **Warnings fail from the start.** This departs from the research's "warn first, promote
@@ -183,14 +197,11 @@ check, and `pre-push` runs `cargo xtask ci`.
   where path separators and line endings differ.
 - **Failing paths are proven by fixture tests, not by a throwaway pull request** with
   deliberate violations. The passing path in CI is proven by every pull request.
-- **A failing step stops the pipeline unless configured otherwise.** A repository with no
-  configuration gets the strict behaviour, and continuing is a choice made per step. Rejected:
-  a single switch for the whole pipeline, which cannot keep the checks a repository depends on
-  stopping while the others continue.
-
-## Open questions
-
-- Which of Continual's own steps continue after a failure, for example the static checks
-  before the tests, so that one run reports all of their failures.
-  [Configure which failures stop the pipeline](../tickets/configure-which-failures-stop-the-pipeline.md)
-  decides it.
+- **A pinned release is the gate, with a dogfood job beside it.** A gate built from the change
+  under review lets a change that weakens a check pass its own weakened check. This follows
+  rustc's stage0 compiler and TypeScript's last-known-good build, plus a dogfood run like
+  Clippy's. Rejected: gating with the working-tree build and relying on the guard to flag
+  changes to the check code.
+- **The `xtask` pipeline stays linear until it retires.** Choosing which failures stop a run is
+  the `required` setting of Continual's [pipeline](pipeline.md#pipelines), so `xtask` does not
+  grow its own version first.

@@ -14,7 +14,11 @@ The rules are in [CONVENTIONS.md](../CONVENTIONS.md): the design-document and ti
 - **Design document**: a living document in `docs/` that describes one area of Continual as a
   whole, both what is built and what is planned.
 - **Ticket**: one unit of planned work, a Tusk `ticket` node in `tickets/`.
-- **Planned marker**: the line `> Planned: [<ticket title>](../tickets/<name>.md)` placed where
+- **Points**: a ticket's relative effort on the Fibonacci scale (1, 2, 3, 5, 8, 13, 21).
+- **Task**: a ticket of 1, 2 or 3 points, built in one pull request on top of what is merged.
+- **Story**: work of 5 points or more, as a parent ticket split into tasks.
+- **Epic**: a parent ticket whose children are stories, making one milestone.
+- **Planned marker**: the line `> Planned: [<ticket title>](../tickets/<path>.md)` placed where
   a design document describes something not built yet.
 - **Wave**: the stretch after a contributor approves a commit or push, in which later commits
   and pushes run without asking until the contributor's next message.
@@ -27,9 +31,10 @@ The rules are in [CONVENTIONS.md](../CONVENTIONS.md): the design-document and ti
 ### From idea to merged change
 
 1. **Design.** The design goes into the design documents of the areas it touches, in the
-   present tense, with a planned marker on each part not built yet. The work is split into
-   tickets, one per pull-request-sized change, each created as `pending`. Both are reviewed
-   like any other change, before or together with the work.
+   present tense, with a planned marker on each part not built yet. The work is estimated in
+   points and split into tasks of 1, 2 or 3 points, grouped under stories and epics, each
+   created as `pending`. Both are reviewed like any other change, before or together with the
+   work.
 2. **Work.** The ticket goes to `active`. The agent names the placement step, writes the
    failing test first, and keeps the diff within the layers it named.
 3. **Ready.** `cargo xtask ci` passes. The agent says in one line that the change is ready and
@@ -50,6 +55,11 @@ Work that is dropped loses its ticket and its planned markers in the same change
   `pending`. Tusk refuses any other move.
 - A child ticket names its parent with `parent`, and `blocks` orders tickets that depend on
   each other. Tusk refuses cycles in both.
+- Every ticket with no children is a task with `points` of 1, 2 or 3. Work estimated at 5 or
+  more becomes a story, split into tasks, and carries no points itself; its size is the sum of
+  its tasks. Each task is workable on its own: it starts from what is merged, needs no other
+  open ticket's code, and its pull request meets the definition of done by itself.
+  `tickets/README.md` gives a guide to what each size usually holds.
 - Every agent session starts with the vision and the list of open tickets (the `open-tickets`
   alias).
 - `tusk doctor` reports a ticket outside `tickets/`, a file in `tickets/` that is not a
@@ -113,9 +123,12 @@ line or change history.
 
 ### Tickets
 
-Tickets are markdown files with Tusk frontmatter (`type: ticket`, `title`, `status`, and
-optionally `priority`, `parent` and `blocks`). `tickets/README.md` holds the template and the
-Tusk calls that create and move them. A ticket links to the design-document sections that hold
+Tickets are markdown files with Tusk frontmatter (`type: ticket`, `title`, `status`,
+`points` on a task, and optionally `priority`, `order`, `parent` and `blocks`). Each epic has a
+folder holding `epic.md` and one numbered folder per story, which holds `story.md` and the
+story's tasks, so the folders show the work as the `parent` edges arrange it.
+`tickets/README.md` holds the layout, the template and the Tusk calls that create and move
+them. A ticket links to the design-document sections that hold
 its design and does not repeat them.
 
 ### Agent rules
@@ -151,6 +164,12 @@ without blocking.
   tracked Rust or TOML files have uncommitted changes. A second stop in the same turn goes
   through, so the agent can stop and report a failure.
 
+> Planned: [Check Continual with a pinned release](../tickets/first-release/7-self-hosting/story.md)
+
+These scripts are replaced by Continual's own [harness mod](harness.md), installed with
+`continual install claude` and configured in `continual.toml`, once a pinned release holds
+the review gate.
+
 > Planned: [Let a contributor allow commits, pushes and pull requests](../tickets/let-a-contributor-allow-commits-pushes-and-pull-requests.md)
 
 `/allow` is a project command in `.claude/commands/allow.md`, which tells the agent which
@@ -170,10 +189,11 @@ when the allowance names its step.
 - The `vault` pack makes untyped markdown a `note`. The `kanban` pack adds the `ticket` type,
   the `parent` and `blocks` edges, and the status workflow.
 - The `links-to` edge records each workspace path a page links to or names in inline code.
-  `tusk doctor` warns when a named file is gone, and `names-path=tickets/<name>.md*` finds the
+  `tusk doctor` warns when a named file is gone, and `names-path=tickets/<path>.md*` finds the
   planned markers that point at a ticket.
 - The rules `ticket-location`, `tickets-folder` and `no-specs-or-plans` turn K1 and K5 into
-  `tusk doctor` errors.
+  `tusk doctor` errors. `ticket-points`, `task-size` and `parent-points` do the same for K9,
+  through the `points` property the manifest adds to tickets.
 - Semantic queries use Ollama with `nomic-embed-text`, with the query and document prefixes and
   the lexical weight of 0.5 taken from Tusk's own measured settings. Without Ollama, structural
   queries still work and semantic ones fail.
@@ -202,7 +222,21 @@ and follow-ups. Rules R3 to R5 govern titles, descriptions and attribution.
 - **Tickets are Tusk nodes in the repository.** They are versioned and reviewed with the code
   they plan, and agents query them with the same tools as the documents.
 - **The `kanban` pack as shipped.** Its three states cover the work so far. Dropped work is
-  deleted rather than given a state of its own.
+  deleted rather than given a state of its own. The manifest adds only the `points` property
+  and the K9 rules.
+- **Folders follow the epics and stories.** A contributor sees a milestone's stories, their
+  build order and their tasks by browsing `tickets/`. Story folders are named for their area
+  and numbered rather than named for the outcome, so paths stay short. Rejected: one flat
+  folder, which hides the hierarchy among dozens of files; and folders named for each parent's
+  full outcome, which makes long paths.
+- **Tasks of at most 3 points, each workable on its own.** Each task adds one tested slice of
+  the hexagon, such as a core rule, a port with its fake or an adapter, on top of what is
+  merged, so every later change builds on code that already meets the definition of done. More
+  pull requests cost more at the start, but the cost of each new feature levels off as the
+  ports and adapters it needs already exist, while small reviews keep quality and standards
+  high. Rejected: one ticket per feature, which makes pull requests too large to review
+  closely; estimates in hours, which vary with who or which agent does the work; and points on
+  stories, which drift from the sum of their tasks.
 - **The review gate lives in hooks as well as in prose**, so it holds when an agent forgets the
   rule. Waves keep it to one question per contributor message.
 - **Allowances come only from the contributor's messages and end with the session.** The

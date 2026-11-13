@@ -38,6 +38,10 @@ anyone who cannot open the doc.
 | Interactor | Not used here; the word means different things in Cockburn's and Martin's writing. |
 | Design document | A living document in `docs/` that describes one area of Continual as a whole, built and planned (K1). |
 | Ticket | One unit of planned work: a Tusk `ticket` node in `tickets/` (K5). |
+| Points | A ticket's relative effort on the Fibonacci scale: 1, 2, 3, 5, 8, 13 or 21 (K9). |
+| Task | A ticket of 1, 2 or 3 points: one pull request, workable on its own (K9). |
+| Story | Work of 5 points or more, as a parent ticket split into tasks (K9). |
+| Epic | A parent ticket whose children are stories: one milestone (K9). |
 
 ### Domain glossary
 
@@ -46,33 +50,46 @@ One term per concept (Q1). Reuse these words in code, tests and docs.
 | Term | Meaning |
 | --- | --- |
 | Rule | A convention contributors follow, with an ID such as B1 or T6. A check enforces one or more rules. |
-| Check | One step that inspects a repository and either passes or reports findings. Named by a check name (`CheckName`). |
-| Check name | The lowercase, hyphenated name a contributor types to run one check, such as `comments` (`CheckName`). |
+| Check | One of Continual's own inspections, such as `comments`, which a step runs and which either passes or reports findings. Named by a check name (`CheckName`). |
+| Check name | The lowercase, hyphenated name of a check, such as `comments` (`CheckName`). |
 | Finding | One violation a check reports, located as `path:line: message`. |
-| Pipeline | The ordered checks that run together, stopping at the first failure of a check configured to stop it, the same way locally and in CI. |
-| Tool | An existing program a check runs, such as a formatter, linter, test runner or coverage tool. Continual runs tools; it never reimplements them. |
-| Gate | A check that blocks a change until it passes, or until a contributor approves it. |
+| Step | A named definition in `continual.toml` of what to run: a tool, or checks to run in order. A step never says what it depends on. |
+| Required step | A step whose failure skips every step downstream of it in its pipeline. A pipeline's steps are required unless it says otherwise. |
+| Pipeline | A named, ordered list in `continual.toml` of the steps to run, starting at its first, each later step waiting for steps above it; run the same way locally and in CI. A pipeline can depend on other pipelines. |
+| Event | A moment, such as a commit or the end of an agent's turn, that runs the pipelines a repository maps to it. |
+| Package | A directory with its own `continual.toml`, extending the root one, in a repository that has several. |
+| Tool | An existing program a step runs, such as a formatter, linter, test runner or coverage tool. Continual runs tools and passes their output through; it never reimplements them. |
+| Gate | A step or check that blocks a change until it passes, or until a contributor approves it. |
 | Guarded change | A change to existing tests or gate files, which needs a contributor's approval. |
 | Language | A programming language a repository is written in. Each one is supported through an adapter. |
 
 ## 3. Continual's hexagon
 
 Continual's domain is the enforcement of rules: what a check decides, how findings are
-reported, the order a pipeline runs in and when a gate blocks. Whether two `//` lines form a
-comment block, whether a dependency crosses a boundary, whether a test was weakened and
-whether coverage meets its minimum are core decisions, written as plain Rust types in
-`continual-core`. What stays outside is the machinery: launching tools, reading files, asking
-git and parsing each language's source.
+reported, the order a pipeline's steps run in, which steps a failure skips, and when a gate
+blocks. Whether two `//` lines form a comment block, whether a dependency crosses a boundary,
+whether a test was weakened and whether a command bypasses the checks are core decisions,
+written as plain Rust types in `continual-core`. What stays outside is the machinery:
+launching tools, reading files and configuration, asking git and parsing each language's
+source.
 
 | Concern | Lives in | Port (when it arrives) |
 | --- | --- | --- |
-| Running an external tool and collecting its result | driven adapter that launches processes | core trait, e.g. `ToolRunner` |
-| Reading the repository's files and configuration | driven adapter | core trait, e.g. `SourceTree` |
-| Comparing the working tree with a base revision | driven adapter wrapping git | core trait, e.g. `ChangeHistory` |
-| Reading a language's comments, imports and tests | driven adapter per language, Rust first | core trait, e.g. `LanguageSyntax` |
-| Clock, randomness, IDs, environment | driven adapter, or values passed in | `Clock` trait or plain arguments |
+| Reading `continual.toml` | driven adapter `toml-config` | `ConfigSource` |
+| Running external tools and collecting their results | driven adapter `process` | `ToolRunner` |
+| Showing a run's progress and the tools' output | driven adapter `terminal` | `Report` |
+| Reading the repository's files | driven adapter `git` | `SourceTree` |
+| Comparing the working tree with a base revision | driven adapter `git` | `ChangeHistory` |
+| Reading a language's comments, imports, tests and manifests | driven adapter per language, Rust first | `LanguageSyntax` |
+| Keeping the review gate's state between hook calls | driven adapter `session-state` | `GateState` |
+| Clock, randomness, IDs, environment | values passed in by the composition root | plain arguments; a `Clock` trait only if a rule needs the time |
 | CLI | driving adapter in `crates/continual` | calls core types directly |
-| Agent-harness hooks | driving adapter (future) | calls core types directly |
+| Agent-harness hooks | driving adapter in `crates/continual`, Claude Code first | calls core types directly |
+
+Each port's operations are described in the design document of its area:
+[Pipeline](docs/pipeline.md#ports-and-adapters),
+[Built-in checks](docs/built-in-checks.md#ports-and-adapters) and
+[Harness](docs/harness.md#design).
 
 Crates by role:
 
@@ -171,11 +188,12 @@ Crates by role:
 | K1 | `docs/` holds the design of the whole system, one living design document per area: a behaviour from `VISION.md`, or a part of how Continual is built. Write no spec, plan, proposal or per-change document, whatever a skill or workflow asks for. The design goes into the design documents and the work into tickets. | A | `tusk doctor` (`no-specs-or-plans`); review |
 | K2 | A design document describes its area as a whole: what it does and for whom, its concepts, its behaviour with edge cases and errors, how it is built across core, ports, adapters and composition roots, and the decisions behind it with the alternatives rejected. Write in the present tense, with no dates, status lines or change history, and rewrite the parts the design changes rather than appending. | J | review |
 | K3 | A change that alters behaviour or design updates the design documents it affects in the same PR, so `docs/` matches the code. A new area gets its own document and a row in `docs/README.md`. | A | review; PR template |
-| K4 | Planning a feature means writing its design into the design documents and its work into tickets, reviewed like any change. A part designed but not built yet starts with `> Planned: [<ticket title>](../tickets/<name>.md)`. The PR that builds it removes the marker. | A | review; `tusk doctor` (`path-missing`) |
-| K5 | Planned work is a Tusk ticket at `tickets/<name>.md`, named for its outcome in kebab case. One ticket is one PR-sized change. Larger work is a parent ticket whose children name it with `parent`, and `blocks` orders tickets that depend on each other. | A | `tusk doctor` (`ticket-location`, `tickets-folder`) |
+| K4 | Planning a feature means writing its design into the design documents and its work into tickets, reviewed like any change. A part designed but not built yet starts with `> Planned: [<ticket title>](../tickets/<path>.md)`. The PR that builds it removes the marker. | A | review; `tusk doctor` (`path-missing`) |
+| K5 | Planned work is a Tusk ticket under `tickets/`. A task is named for its outcome in kebab case and lives in its story's folder; a story or an epic is `story.md` or `epic.md` in a folder of its own, named for its area, with stories numbered in build order inside their epic. One task is one PR. Larger work is a parent ticket whose children name it with `parent`, and `blocks` orders tickets that depend on each other. | A | `tusk doctor` (`ticket-location`, `tickets-folder`) |
 | K6 | A ticket states its goal, links to the design-document sections that hold its design, lists the behaviours to test (T2) and says when it is done. It does not restate the design. | J | review |
 | K7 | A ticket starts `pending`, becomes `active` when work starts, and becomes `completed` in the PR that finishes it. Change the status through Tusk, which checks each move. Work a PR leaves for later becomes a ticket listed under "Follow-ups". Dropped work is deleted with its planned markers. | A | Tusk workflow; review; PR template |
 | K8 | Each fact has one home: what Continual does for its users in `VISION.md`, how every change is made in `CONVENTIONS.md`, how each area is built in `docs/`, an item's contract in its doc comment, the planned work in `tickets/`. Link to the home instead of repeating it. | J | review |
+| K9 | Estimate work in Fibonacci points before it becomes tickets. Work of 1, 2 or 3 points is a task, which carries its `points`. Work of 5 or more is a story: a parent ticket split into tasks of 1, 2 or 3 points, with no points of its own, so its size is the sum of its tasks. An epic groups stories into a milestone. Each task is workable on its own: it starts from what is merged, needs no other open ticket's code, and its PR meets the definition of done by itself. | A | `tusk doctor` (`ticket-points`, `task-size`, `parent-points`); review |
 
 ### Errors (E)
 
@@ -347,7 +365,7 @@ choice you made, or stop and report when the choice would add a port or cross a 
 | Git hooks | `lefthook.yml` | Q21, C1–C3, R3, R5 |
 | Claude Code hooks | `.claude/settings.json` | R1, G9, C1–C3, Q21 |
 | Everything, in order | `cargo xtask ci`; GitHub Actions `.github/workflows/ci.yml` and `.github/workflows/pr-checks.yml` | all of the above |
-| Design documents and tickets | `tusk doctor`, with the rules, ticket workflow and `links-to` paths in `tusk.toml`; local only, since CI has no Tusk | K1, K4, K5, K7 |
+| Design documents and tickets | `tusk doctor`, with the rules, ticket workflow and `links-to` paths in `tusk.toml`; local only, since CI has no Tusk | K1, K4, K5, K7, K9 |
 
 ## 8. Resolved decisions
 
