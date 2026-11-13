@@ -32,8 +32,8 @@ or value at its line.
 - `run` is split into words like a shell would split them, with single and double quotes
   grouping words, and `{files}` and `{message_file}` kept as placeholder tokens; an unclosed
   quote is a configuration error.
-- `[steps]` and `[pipelines]` are read with their inline entry tables, each entry's
-  `depends_on` and `required` included.
+- `[steps]` and `[pipelines]` are read, each pipeline's `[[pipelines.<name>.steps]]` entries
+  in the order written, with their `step`, `depends_on` and `required`.
 - CRLF line endings read the same as LF.
 
 ## Done when

@@ -26,8 +26,11 @@ The `pipeline` module in [Pipeline: core](../../../docs/pipeline.md#core),
 ## Behaviours to test
 
 - A run includes the pipelines asked for and every pipeline they depend on, and nothing else.
-- A pipeline's entries become ready only once every pipeline it depends on has passed, and an
-  entry only once every entry it depends on has finished.
+- A pipeline's starting entry becomes ready only once every pipeline it depends on has
+  passed, and every later entry only once every entry it depends on has finished.
+- Ready entries come in a fixed order: the pipelines depended on before the pipelines that
+  depend on them, in `depends_on` order; the pipelines asked for in the order asked; and within
+  a pipeline, written order.
 - A failed required entry skips every entry downstream of it in its pipeline, transitively.
 - A failed entry with `required = false` is reported, and its dependents still become ready.
 - A failed pipeline skips every pipeline that depends on it.

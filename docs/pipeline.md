@@ -19,8 +19,9 @@ Step, required step, pipeline, event, package, check and tool mean what the
   configuration.
 - **Tool step**: a step that runs one command (`run`).
 - **Check step**: a step that runs one or more built-in checks (`checks`), in list order.
-- **Pipeline entry**: a step as one pipeline lists it, with the entries of that pipeline it
-  depends on and whether it is required there.
+- **Pipeline entry**: a step as one pipeline lists it, in the pipeline's ordered list of
+  entries, with the entries above it that it depends on and whether it is required there.
+- **Starting entry**: the first entry of a pipeline, the one that starts it.
 - **Pipeline reference**: how a pipeline names another one in `depends_on`: `ci` for a
   pipeline of the same package, `shared:build` for the `build` pipeline of the package named
   `shared`.
@@ -63,15 +64,28 @@ run = "cargo nextest run --workspace"
 install = "cargo install cargo-nextest --locked"
 timeout = "20m"
 
-[pipelines.ci.steps]
-fmt = {}
-clippy = { depends_on = ["fmt"] }
-conventions = { depends_on = ["fmt"], required = false }
-test = { depends_on = ["clippy"] }
+[[pipelines.ci.steps]]
+step = "fmt"
 
-[pipelines.quick.steps]
-fmt = {}
-conventions = { depends_on = ["fmt"] }
+[[pipelines.ci.steps]]
+step = "clippy"
+depends_on = ["fmt"]
+
+[[pipelines.ci.steps]]
+step = "conventions"
+depends_on = ["fmt"]
+required = false
+
+[[pipelines.ci.steps]]
+step = "test"
+depends_on = ["clippy"]
+
+[[pipelines.quick.steps]]
+step = "fmt"
+
+[[pipelines.quick.steps]]
+step = "conventions"
+depends_on = ["fmt"]
 ```
 
 - `[continual] version` pins the Continual release the repository runs. A `continual` binary
@@ -87,21 +101,27 @@ conventions = { depends_on = ["fmt"] }
 - `timeout` bounds how long the step's tool may run, written as `"90s"`, `"20m"` or `"1h30m"`.
   A step without one gets `[continual] timeout`, which is 30 minutes unless the root
   configuration sets it. No tool runs without a limit ([timeouts](#timeouts)).
-- `[pipelines.<name>]` defines a pipeline, named like a step. Its `steps` table lists its
-  entries: each key is a step, and each value says which entries of the same pipeline it
-  `depends_on` and whether it is `required` (by default it is).
-- A pipeline's own `depends_on` lists the pipelines that must pass before it starts. Only the
-  pipeline that needs another names it; nothing declares what it blocks.
+- `[pipelines.<name>]` defines a pipeline, named like a step. Its entries are an array,
+  `[[pipelines.<name>.steps]]`, which TOML keeps in the order written. Each entry names its
+  `step`, the entries above it that it `depends_on`, and whether it is `required` (by default
+  it is). A step appears at most once in a pipeline.
+- The first entry is the starting entry: it has no `depends_on` and starts the pipeline. Every
+  later entry depends on at least one entry above it and never on one below, so the written
+  order is always an order the pipeline can run in, and a cycle cannot be written.
+- A pipeline's own `depends_on` lists the pipelines that must pass before its starting entry
+  starts. Only the pipeline that needs another names it; nothing declares what it blocks.
+- A pipeline with no entries, `steps = []`, runs nothing and passes.
 - Unknown keys are errors, so a misspelt key never silently turns a check off.
 
 Continual reads every configuration before it runs anything. An invalid configuration ends the
 run with exit code 2 and reports each problem as a finding, such as
-`continual.toml:31: entry "test" of pipeline "ci" depends on "lnt", which the pipeline does not
-list`. The problems it reports are an unknown key or value, a pipeline entry naming an unknown
-step, an entry depending on one its pipeline does not list, an unknown pipeline or package in
-`depends_on`, a cycle among a pipeline's entries or among pipelines (named in order), a step
-with both or neither of `run` and `checks`, a timeout that is not a positive duration, and a
-version that does not match the binary.
+`continual.toml:31: entry "test" of pipeline "ci" depends on "lnt", which is not listed above
+it`. The problems it reports are an unknown key or value, a pipeline entry naming an unknown
+step, a step listed twice in one pipeline, a starting entry with `depends_on`, a later entry
+without it, an entry depending on one that is not above it, an unknown pipeline or package in
+a pipeline's `depends_on`, a cycle among pipelines (named in order), a step with both or
+neither of `run` and `checks`, a timeout that is not a positive duration, and a version that
+does not match the binary.
 
 ### Commands
 
@@ -173,10 +193,15 @@ needs one.
 > Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
 
 `continual run <pipeline>...` runs the named pipelines, each after the pipelines it depends
-on. Inside a pipeline, an entry starts when every entry it depends on has finished, so entries
-that do not depend on each other run at the same time, up to `--jobs` at once across the run
-(by default, the number of CPUs). Pipelines that do not depend on each other run at the same
-time too.
+on. A pipeline starts with its starting entry; every later entry starts when every entry it
+depends on has finished, so entries that do not depend on each other run at the same time, up
+to `--jobs` at once across the run (by default, the number of CPUs). Pipelines that do not
+depend on each other run at the same time too.
+
+When more entries are ready than there are free jobs, the order is fixed, so every machine
+schedules the same way: the pipelines a pipeline depends on come before it, in the order its
+`depends_on` lists them, the pipelines asked for come in the order the command names them, and
+within a pipeline the entry written first starts first.
 
 - A step fails when its tool exits with a non-zero code, is killed or runs past its timeout,
   when a check reports findings, or when it could not run.
@@ -190,10 +215,11 @@ time too.
   reuses an outcome.
 - The run fails when any entry failed. Skipped entries never pass.
 
-With the configuration above, `continual run ci` with a failing `fmt` skips `clippy`,
-`conventions` and `test`. A failing `conventions` is reported, `test` still runs, and the run
-fails either way. `continual run quick` runs `fmt` and `conventions` alone: the same steps on a
-shorter path.
+With the configuration above, `continual run ci` starts with `fmt`. When it passes, `clippy`
+and `conventions` start together, and `test` follows `clippy`. A failing `fmt` skips
+`clippy`, `conventions` and `test`. A failing `conventions` is reported, `test` still runs, and
+the run fails either way. `continual run quick` runs `fmt` and then `conventions`: the same
+steps on a shorter path.
 
 ### Output and exit codes
 
@@ -244,16 +270,19 @@ run = "eslint ."
 [workspace.steps.test]
 run = "vitest run"
 
-[workspace.pipelines.check.steps]
-lint = {}
-test = { depends_on = ["lint"] }
+[[workspace.pipelines.check.steps]]
+step = "lint"
+
+[[workspace.pipelines.check.steps]]
+step = "test"
+depends_on = ["lint"]
 
 [steps.commit-messages]
 [[steps.commit-messages.checks]]
 check = "commit-messages"
 
-[pipelines.messages.steps]
-commit-messages = {}
+[[pipelines.messages.steps]]
+step = "commit-messages"
 ```
 
 ```toml
@@ -266,16 +295,20 @@ run = "vitest run --coverage"
 [pipelines.check]
 depends_on = ["shared:build"]
 
-[pipelines.check.steps]
-lint = {}
-test = { depends_on = ["lint"] }
+[[pipelines.check.steps]]
+step = "lint"
+
+[[pipelines.check.steps]]
+step = "test"
+depends_on = ["lint"]
 ```
 
 ```toml
 # docs/continual.toml
 name = "docs"
 
-[pipelines.check.steps]
+[pipelines.check]
+steps = []
 ```
 
 - `[workspace] packages` lists globs of directories. Each must hold a `continual.toml` with a
@@ -306,9 +339,12 @@ An event is a moment at which a repository wants some pipelines to run. `[events
 one to its pipelines:
 
 ```toml
-[pipelines.edited.steps]
-fmt-edited = {}
-conventions = {}
+[[pipelines.edited.steps]]
+step = "fmt-edited"
+
+[[pipelines.edited.steps]]
+step = "conventions"
+depends_on = ["fmt-edited"]
 
 [events]
 on_agent_file_edit = ["edited"]
@@ -347,11 +383,13 @@ The pipeline's decisions are core code in `continual-core`, in feature modules:
 
 - **`workspace`**: packages, steps, pipelines, their references, and the inheritance from
   `[workspace.steps]` and `[workspace.pipelines]`. Building a `Workspace` resolves every
-  reference and rejects unknown steps, pipelines and packages, cycles and malformed steps
-  (V3), so a `Workspace` value always holds valid graphs. Step, pipeline and package names are
+  reference and rejects unknown steps, pipelines and packages, entries that break the
+  starting-entry and above-only rules, cycles among pipelines and malformed steps (V3), so a
+  `Workspace` value always holds valid graphs, each with its entries in written order. Step, pipeline and package names are
   value objects with `CheckName`'s parsing rules.
 - **`pipeline`**: a `Run` plans the pipelines asked for and the pipelines they depend on, then
-  works as a state machine: it says which entries are ready, records each outcome, skips the
+  works as a state machine: it says which entries are ready, in the fixed order the
+  [pipelines](#pipelines) section gives, records each outcome, skips the
   downstream of a failed required entry and the pipelines that depend on a failed one, and ends
   with a verdict naming every failed and skipped entry. It holds no threads and no clock;
   concurrency belongs to the `ToolRunner` adapter.
@@ -403,9 +441,17 @@ each, and maps the verdict to the exit code (A2).
   a full `ci` and a `quick` run before an agent's turn ends, and a package leaves out a shared
   step by its pipelines alone. A pipeline names the pipelines it depends on, and nothing
   declares what it blocks, so every edge is written where it is used. Rejected: dependencies
-  declared on the steps themselves, which tie each step to one order; a fixed ordered list,
-  which serialises independent work and cannot describe a monorepo; and edges inferred from
-  package manifests, as turbo's `^build` does, which hides why a step runs.
+  declared on the steps themselves, which tie each step to one order; a plain list run one
+  step after another, which serialises independent work; and edges inferred from package
+  manifests, as turbo's `^build` does, which hides why a step runs.
+- **A pipeline is an ordered list that starts at its first entry, with edges only upward.** A
+  pipeline reads top to bottom in an order it can run in, names the step that starts it, and
+  cannot hold a cycle, and its written order settles which ready entry starts first, so every
+  machine schedules the same way. Rejected: a table of entries keyed by step, whose key order
+  TOML does not keep; an ordered list with a separate `start` key and edges pointing anywhere,
+  which needs a reachability check and lets the written order disagree with the run order; and
+  stages, in which each step waits for the whole stage before it, which loses the edges
+  between single steps.
 - **A failed required entry skips its downstream; entries are required by default.** A
   repository with no settings gets the strict behaviour. `required` belongs to the pipeline
   entry, so the same step can stop one pipeline and only report in another. Rejected: a

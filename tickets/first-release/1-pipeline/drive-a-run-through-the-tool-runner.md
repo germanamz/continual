@@ -26,7 +26,8 @@ The use-case loop in [Pipeline: core](../../../docs/pipeline.md#core) and the `T
 ## Behaviours to test
 
 - Independent ready entries start together, never more than the job limit at once across
-  every pipeline of the run.
+  every pipeline of the run; when there are more than free jobs, they start in the order the
+  `Run` gives them.
 - Each step's command, directory and time limit reach the runner as the configuration gives
   them.
 - Output lines are taken as the runner hands them back, each with its entry and stream, while

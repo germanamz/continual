@@ -55,7 +55,7 @@ One term per concept (Q1). Reuse these words in code, tests and docs.
 | Finding | One violation a check reports, located as `path:line: message`. |
 | Step | A named definition in `continual.toml` of what to run: a tool, or checks to run in order. A step never says what it depends on. |
 | Required step | A step whose failure skips every step downstream of it in its pipeline. A pipeline's steps are required unless it says otherwise. |
-| Pipeline | A named graph in `continual.toml` of the steps to run and what each waits for, run the same way locally and in CI. A pipeline can depend on other pipelines. |
+| Pipeline | A named, ordered list in `continual.toml` of the steps to run, starting at its first, each later step waiting for steps above it; run the same way locally and in CI. A pipeline can depend on other pipelines. |
 | Event | A moment, such as a commit or the end of an agent's turn, that runs the pipelines a repository maps to it. |
 | Package | A directory with its own `continual.toml`, extending the root one, in a repository that has several. |
 | Tool | An existing program a step runs, such as a formatter, linter, test runner or coverage tool. Continual runs tools and passes their output through; it never reimplements them. |

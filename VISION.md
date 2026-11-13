@@ -11,8 +11,8 @@ every time, on every machine and in CI.
 ### Pipeline
 
 A repository declares its steps in one `continual.toml`, each by name, like the scripts of a
-`package.json`, and declares its pipelines apart from them: which steps each pipeline runs and
-what each step waits for, so the same steps can run along different paths, such as a full CI
+`package.json`, and declares its pipelines apart from them: which steps each pipeline runs, in
+the order written from the step that starts it, and what each step waits for, so the same steps can run along different paths, such as a full CI
 run and a quick check before an agent's turn ends. Continual runs each pipeline as a graph:
 steps that do not wait for each other run at the same time, and a failing step that is
 required skips every step downstream of it. A pipeline can depend on other pipelines. In a
