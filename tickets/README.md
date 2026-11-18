@@ -8,7 +8,8 @@ repeating it. The rules are K4 to K7 and K9 in
 ## A ticket
 
 A ticket's id is its path without `.md`. A ticket that must land first names the tickets it
-holds up with `blocks`.
+holds up with `blocks`. A story's `blocks` hold up every task of the stories it names, so a
+task can start when no open ticket blocks it or its story.
 
 | Kind | What it is | File | `points` |
 | --- | --- | --- | --- |
@@ -46,10 +47,9 @@ guide:
 | 3 | A new port with its contract suite, fake and first adapter, or a feature module's first slice in the core. |
 | 5 or more | More than one of these, or a change across the core and several adapters: a story. |
 
-A task is workable on its own when it starts from what is merged, needs no other open
-ticket's code, and its pull request meets the definition of done by itself. A port arrives
-with the first task that uses it, and an adapter with the first task that needs it, so no
-task leaves code waiting for the next one.
+A task is workable on its own, as K9 defines it. A port arrives with the first task that uses
+it, and an adapter with the first task that needs it, so no task leaves code waiting for the
+next one.
 
 ```markdown
 ---
@@ -112,10 +112,11 @@ deleted, along with its planned markers in the design documents.
 | Add a parent or a blocked ticket | `tusk_edge_add` with type `parent` or `blocks` | `tusk edge add --type parent --source tickets/<path> --target tickets/<parent>` |
 | List the open tickets | `tusk_run` with alias `open-tickets` | `tusk run open-tickets` |
 | List a ticket's children | `tusk_query` with filter `type=ticket AND parent-> id=tickets/<path>` | `tusk query 'type=ticket AND parent-> id=tickets/<path>'` |
-| List everything under an epic | `tusk_query` with filter `type=ticket AND parent->+ id=tickets/<epic>` | `tusk query 'type=ticket AND parent->+ id=tickets/<epic>'` |
+| List everything under an epic | `tusk_query` with filter `type=ticket AND parent->+ id=tickets/<epic>` and `take: 500` | `tusk query 'type=ticket AND parent->+ id=tickets/<epic>' --take 500` |
 | Find its planned markers | `tusk_query` with filter `names-path=tickets/<path>.md*` | `tusk query 'names-path=tickets/<path>.md*'` |
-| Size a story or an epic | `tusk_query` with filter `type=ticket AND points=* AND parent->+ id=tickets/<story>`, adding the `points` | `tusk query 'type=ticket AND points=* AND parent->+ id=tickets/<story>' --fields id,properties.points` |
+| Size a story or an epic | `tusk_query` with filter `type=ticket AND points=* AND parent->+ id=tickets/<story>` and `take: 500`, adding the `points` | `tusk query 'type=ticket AND points=* AND parent->+ id=tickets/<story>' --fields id,properties.points --take 500` |
 | Check the rules | `tusk_doctor` | `tusk doctor` |
 
 The trailing `*` in the marker query makes it a glob, which matches the ticket's own path. A
-plain path would also match every page that names the `tickets/` folder.
+plain path would also match every page that names the `tickets/` folder. A query returns its
+first 50 rows unless `take` asks for more, so the queries that list or size an epic set it.

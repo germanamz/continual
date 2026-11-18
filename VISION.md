@@ -12,8 +12,9 @@ every time, on every machine and in CI.
 
 A repository declares its steps in one `continual.toml`, each by name, like the scripts of a
 `package.json`, and declares its pipelines apart from them: which steps each pipeline runs, in
-the order written from the step that starts it, and what each step waits for, so the same steps can run along different paths, such as a full CI
-run and a quick check before an agent's turn ends. Continual runs each pipeline as a graph:
+the order written from the step that starts it, and what each step waits for, so the same
+steps can run along different paths, such as a full CI run and a quick check before an
+agent's turn ends. Continual runs each pipeline as a graph:
 steps that do not wait for each other run at the same time, and a failing step that is
 required skips every step downstream of it. A pipeline can depend on other pipelines. In a
 monorepo, each package's `continual.toml` extends the root one, and a pipeline can depend on
@@ -62,7 +63,7 @@ knows its syntax and its tools; Rust is the first.
 
 The same checks run from git hooks, from CI and from agent harnesses, with one
 implementation behind all of them. A repository maps moments such as a commit, an agent's
-file edit or the end of an agent's turn to the steps they run, and a step can receive the
+file edit or the end of an agent's turn to the pipelines they run, and a step can receive the
 files the moment touched.
 
 ## Interfaces

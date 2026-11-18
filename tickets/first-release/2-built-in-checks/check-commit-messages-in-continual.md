@@ -1,6 +1,7 @@
 ---
 type: ticket
 title: Check commit messages in Continual
+blocks: tickets/first-release/3-events/give-check-steps-an-events-files-and-message
 parent: tickets/first-release/2-built-in-checks/story
 points: 3
 priority: medium
@@ -11,8 +12,8 @@ status: pending
 
 ## Goal
 
-Run the commit-messages check on every message it is given: the `on_commit_msg` message file,
-every commit in `--range`, and a pull request's `--title` and `--body`.
+Run the commit-messages check on the messages CI gives it: every commit in `--range`, and a
+pull request's `--title` and `--body`.
 
 ## Design
 
@@ -21,7 +22,6 @@ every commit in `--range`, and a pull request's `--title` and `--body`.
 
 ## Behaviours to test
 
-- The message file of `on_commit_msg` is checked.
 - Every commit in `--range` is checked, each finding naming its commit.
 - `--title` is checked as a subject and `--body` as a body.
 - The `ChangeHistory` contract suite for the messages in a range passes against the fake and

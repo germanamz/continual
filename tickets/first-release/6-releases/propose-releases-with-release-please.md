@@ -28,8 +28,12 @@ GitHub.
   `[workspace.package]`, and `Cargo.lock` with it, and adds the changelog entry.
 - Merging it tags `v<version>` and creates the GitHub release.
 - A push with only `docs`, `test` or `chore` commits proposes no release.
+- The release pull request runs the same checks as any pull request, and the release created
+  by merging it starts the release workflow, because release-please runs with its own token.
 
 ## Done when
 
+- The contributor has created the token and stored it as a repository secret; creating it is
+  theirs to do.
 - The workflow and the release-please configuration are in `.github/`, with third-party
   actions pinned to full commit SHAs.

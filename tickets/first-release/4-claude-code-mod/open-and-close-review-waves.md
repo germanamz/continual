@@ -24,8 +24,11 @@ port: an approved commit or push opens a wave, and the contributor's next messag
 
 ## Behaviours to test
 
-- The first commit or push after a contributor message asks; once one is approved, later
-  commits and pushes are answered `pass` until the contributor's next message, never `allow`.
+- The first commit or push after a contributor message asks; once one is approved, whether it
+  then succeeds or fails, later commits and pushes are answered `allow` until the
+  contributor's next message.
+- Inside a wave, a command that chains anything but commits, pushes, `cd` and `git add` is
+  answered `pass`, so the harness's own rules decide.
 - Inside a wave, pull requests and merges still ask, and bypasses stay blocked.
 - State is kept per session ID: one session's wave never reaches another.
 - `GateState` is documented per P5, and the fake passes its contract suite.

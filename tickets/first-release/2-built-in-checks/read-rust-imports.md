@@ -12,7 +12,7 @@ status: pending
 ## Goal
 
 Implement the imports operation of `LanguageSyntax` in `continual-rust` with `syn`, so
-`forbidden-imports` works on Rust as the `xtask` arch check's source scan does today.
+`forbidden_imports` works on Rust as the `xtask` arch check's source scan does today.
 
 ## Design
 

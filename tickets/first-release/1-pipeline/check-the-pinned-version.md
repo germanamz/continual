@@ -24,6 +24,8 @@ The `[continual] version` bullet in
 
 - A binary version that differs from the pin stops the load with a problem that names both
   versions and gives `cargo install continual --locked --version <pinned>`.
+- A mismatched version is the only problem reported, whatever else the configuration input
+  holds.
 - An unpinned load runs with any version and says so.
 - A matching version loads as before.
 

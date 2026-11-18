@@ -4,6 +4,7 @@ title: Guard protected files in Continual
 blocks:
   - tickets/first-release/2-built-in-checks/guard-existing-tests-in-continual
   - tickets/first-release/2-built-in-checks/compare-with-the-merge-base-in-git
+  - tickets/first-release/4-claude-code-mod/block-commands-that-skip-checks
 parent: tickets/first-release/2-built-in-checks/story
 points: 3
 priority: medium

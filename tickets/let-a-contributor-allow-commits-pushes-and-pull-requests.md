@@ -16,9 +16,8 @@ push or open pull requests without asking each time, as the
 
 ## Design
 
-[Workflow: allowances](../docs/workflow.md#allowances), the allowance paragraph in
-[Claude Code settings and hooks](../docs/workflow.md#claude-code-settings-and-hooks), and
-[Workflow: open questions](../docs/workflow.md#open-questions).
+[Workflow: allowances](../docs/workflow.md#allowances) and the allowance paragraphs in
+[Claude Code settings and hooks](../docs/workflow.md#claude-code-settings-and-hooks).
 
 ## Behaviours to test
 
@@ -26,6 +25,8 @@ push or open pull requests without asking each time, as the
 - Each step is allowed on its own: an allowance for commits does not cover pushes, and one
   for pushes does not cover pull requests.
 - `/allow pr` lets pull-request creation through, and a merge still asks.
+- The `ask` rule for `gh pr create` is gone from `.claude/settings.json`, and without an
+  allowance every pull request still asks.
 - `/allow off` withdraws the allowance, and the next commit asks again.
 - Inside an allowance, the commands the review gate always blocks stay blocked.
 - An allowance in one session does not reach another session.
@@ -36,7 +37,6 @@ push or open pull requests without asking each time, as the
 
 ## Done when
 
-- The open question in docs/workflow.md is decided and removed.
 - R1 in CONVENTIONS.md, the review gate in AGENTS.md and the hook notes in CLAUDE.md
   describe the allowance.
 - The design documents describe the change, and its planned markers are gone.

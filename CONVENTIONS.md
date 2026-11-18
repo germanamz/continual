@@ -54,7 +54,7 @@ One term per concept (Q1). Reuse these words in code, tests and docs.
 | Check name | The lowercase, hyphenated name of a check, such as `comments` (`CheckName`). |
 | Finding | One violation a check reports, located as `path:line: message`. |
 | Step | A named definition in `continual.toml` of what to run: a tool, or checks to run in order. A step never says what it depends on. |
-| Required step | A step whose failure skips every step downstream of it in its pipeline. A pipeline's steps are required unless it says otherwise. |
+| Required entry | A step as one pipeline lists it, whose failure skips everything downstream of it in that pipeline. A pipeline's entries are required unless it says otherwise, so one step can be required in one pipeline and not in another. |
 | Pipeline | A named, ordered list in `continual.toml` of the steps to run, starting at its first, each later step waiting for steps above it; run the same way locally and in CI. A pipeline can depend on other pipelines. |
 | Event | A moment, such as a commit or the end of an agent's turn, that runs the pipelines a repository maps to it. |
 | Package | A directory with its own `continual.toml`, extending the root one, in a repository that has several. |
@@ -193,7 +193,7 @@ Crates by role:
 | K6 | A ticket states its goal, links to the design-document sections that hold its design, lists the behaviours to test (T2) and says when it is done. It does not restate the design. | J | review |
 | K7 | A ticket starts `pending`, becomes `active` when work starts, and becomes `completed` in the PR that finishes it. Change the status through Tusk, which checks each move. Work a PR leaves for later becomes a ticket listed under "Follow-ups". Dropped work is deleted with its planned markers. | A | Tusk workflow; review; PR template |
 | K8 | Each fact has one home: what Continual does for its users in `VISION.md`, how every change is made in `CONVENTIONS.md`, how each area is built in `docs/`, an item's contract in its doc comment, the planned work in `tickets/`. Link to the home instead of repeating it. | J | review |
-| K9 | Estimate work in Fibonacci points before it becomes tickets. Work of 1, 2 or 3 points is a task, which carries its `points`. Work of 5 or more is a story: a parent ticket split into tasks of 1, 2 or 3 points, with no points of its own, so its size is the sum of its tasks. An epic groups stories into a milestone. Each task is workable on its own: it starts from what is merged, needs no other open ticket's code, and its PR meets the definition of done by itself. | A | `tusk doctor` (`ticket-points`, `task-size`, `parent-points`); review |
+| K9 | Estimate work in Fibonacci points before it becomes tickets. Work of 1, 2 or 3 points is a task, which carries its `points`. Work of 5 or more is a story: a parent ticket split into tasks of 1, 2 or 3 points, with no points of its own, so its size is the sum of its tasks. An epic groups stories into a milestone. Each task is workable on its own: it starts from what is merged, needs no other open ticket's code, and its PR meets the definition of done by itself. | A | `tusk doctor` (`task-size`, `parent-points`); review |
 
 ### Errors (E)
 

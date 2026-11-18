@@ -15,7 +15,7 @@ status: pending
 ## Goal
 
 Let a repository map moments such as a commit, an agent's file edit or the end of an agent's
-turn to the steps they run, with the touched files passed to the tools, so git hooks and
+turn to the pipelines they run, with the touched files passed to the tools, so git hooks and
 agent harnesses run the same steps through one implementation
 ([hooks](../../../VISION.md#hooks)).
 

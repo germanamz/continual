@@ -39,6 +39,10 @@ area says what its ports ask.
 
 > Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
 
+> Planned: [Run the built-in checks in Continual](../tickets/first-release/2-built-in-checks/story.md)
+
+> Planned: [Hold the review gate in the Claude Code mod](../tickets/first-release/4-claude-code-mod/story.md)
+
 | Crate | Path | Implements | Designed in |
 | --- | --- | --- | --- |
 | `continual-toml-config` | `crates/adapters/toml-config/` | `ConfigSource` | [Pipeline](pipeline.md#ports-and-adapters) |
@@ -118,8 +122,10 @@ configuration.
   move into Continual without changing the product's architecture, and they move once a
   released `continual` can take over ([Checks: self-hosting](checks.md#self-hosting)).
 - **Adapters use the libraries `xtask` already uses.** `toml` and serde for configuration,
-  `std::process` for tools and git, and `ra-ap-rustc_lexer`, `syn` and `toml` for Rust, so
-  the first adapters add no new dependency.
+  `std::process` for tools and git, and `ra-ap-rustc_lexer`, `syn` and `toml` for Rust. What
+  those do not cover is added by the task that first needs it, with its reason (G8): signalling
+  a process group, Windows job objects and catching Ctrl-C in the adapters and the composition
+  root, where `unsafe` code is forbidden, and regular expressions and globs in the core.
 - **clap with the derive feature**, since every future command needs argument parsing.
 - **Smoke tests run the built binary** through `env!("CARGO_BIN_EXE_continual")` and
   `std::process::Command`, so they need no extra test dependency.

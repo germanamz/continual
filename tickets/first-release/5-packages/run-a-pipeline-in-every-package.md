@@ -29,6 +29,8 @@ The run rules at the end of [Pipeline: packages](../../../docs/pipeline.md#packa
 - `continual run web:check` runs one package's pipeline from any directory.
 - A package's tool runs in that package's directory; the root's own pipelines run once, in the
   root directory; shared pipelines never run at the root.
+- When more entries are ready than there are free jobs, packages come in the order of their
+  names, the root last.
 - Each prefixed output line, failure line and summary line names the entry's package.
 
 ## Done when

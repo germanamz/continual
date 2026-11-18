@@ -1,6 +1,7 @@
 ---
 type: ticket
 title: Run steps across a repository's packages
+blocks: tickets/first-release/6-releases/publish-the-first-release
 order: 5
 parent: tickets/first-release/epic
 priority: medium
@@ -12,8 +13,8 @@ status: pending
 ## Goal
 
 Let a monorepo list its packages in the root `continual.toml`, let each package configuration
-inherit the root's shared steps, and let a step depend on another package's step, so one
-pipeline covers every package ([pipeline](../../../VISION.md#pipeline)).
+inherit the root's shared steps and pipelines, and let a pipeline depend on another package's
+pipeline, so one command covers every package ([pipeline](../../../VISION.md#pipeline)).
 
 ## Design
 

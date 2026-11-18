@@ -6,6 +6,7 @@ blocks:
   - tickets/first-release/2-built-in-checks/check-architecture-in-continual
   - tickets/first-release/2-built-in-checks/split-commit-messages-into-parts
   - tickets/first-release/5-packages/route-files-to-their-packages
+  - tickets/first-release/3-events/give-check-steps-an-events-files-and-message
 parent: tickets/first-release/2-built-in-checks/story
 points: 3
 priority: high
@@ -31,8 +32,7 @@ with the comments check.
   when any check reports findings.
 - A check that cannot run makes its step could-not-run (exit code 2), and never reports "no
   findings" instead.
-- A per-file check inspects the event's files in an event and every tracked file of its
-  package otherwise; a repository check ignores the event's files.
+- A per-file check inspects every file of its package that git tracks or would track.
 - An unknown check name, or an unknown setting of a check, is a configuration error at its
   line.
 - Findings print with paths relative to the repository root.
@@ -41,3 +41,5 @@ with the comments check.
 ## Done when
 
 - The composition root wires `continual-rust` and `continual-git` into check steps.
+- The open question on how check entries run beside tools in docs/pipeline.md is decided and
+  removed.

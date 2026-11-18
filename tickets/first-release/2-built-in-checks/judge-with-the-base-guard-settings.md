@@ -12,7 +12,7 @@ status: pending
 
 ## Goal
 
-Make the guard read `protected` and `approval-label` from the base revision's
+Make the guard read `protected` and `approval_label` from the base revision's
 `continual.toml`, so a change cannot loosen the guard that judges it.
 
 ## Design
@@ -24,9 +24,12 @@ its decision in [decisions](../../../docs/built-in-checks.md#decisions).
 
 - A change that removes a path from `protected` is still reported for that path.
 - A change that renames the approval label is still judged with the old one.
-- A base revision with no `continual.toml`, or with no guard entry, makes the check
-  could-not-run with that reason.
+- A base revision with no `continual.toml`, or with no guard entry, is judged with the
+  built-in settings: the default approval label, and `continual.toml` as the only protected
+  path. The change that adds the first guard entry is reported for its `continual.toml`.
 
 ## Done when
 
-- The configuration at a revision is read through the existing ports, with no new port.
+- The configuration at a revision is read through the existing ports, with no new port:
+  `ChangeHistory` gives its text, and `ConfigSource` gains the operation that turns one
+  configuration's text into configuration input.

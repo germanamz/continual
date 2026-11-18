@@ -4,6 +4,7 @@ title: Pass an event's files to its steps
 blocks:
   - tickets/first-release/3-events/read-an-events-files-from-change-history
   - tickets/first-release/5-packages/route-files-to-their-packages
+  - tickets/first-release/3-events/give-check-steps-an-events-files-and-message
 parent: tickets/first-release/3-events/story
 points: 3
 priority: medium
@@ -29,10 +30,14 @@ a step whose filtered files are empty, so a tool sees exactly the files the mome
 - `files` globs filter the event's files; a step without `files` takes them all.
 - A file whose path holds spaces, non-ASCII characters or, on Windows, backslashes stays one
   word with its path intact.
-- A step whose filtered files are empty is skipped and reported as skipped, not passed.
+- A path that starts with `-` is passed with `./` in front.
+- A step whose filtered files are empty is skipped and reported as skipped, not passed. The
+  entries that depend on it still run, and a run with no failed entry exits with code 0.
+- An event without files filters nothing and skips nothing.
 
 ## Done when
 
 - The rules are tested in the core with fakes.
+- The open question on the command-line limit in docs/pipeline.md is decided and removed.
 - If matching globs needs a library in the core, it is a pure-computation crate added to
   `arch.toml`'s allow-list with a reason, after the contributor approves it.

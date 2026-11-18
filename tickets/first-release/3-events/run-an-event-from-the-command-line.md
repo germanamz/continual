@@ -12,7 +12,8 @@ status: pending
 
 ## Goal
 
-Make `continual event <event> [--files <path>...]` work end to end through the real binary.
+Make `continual event <event> [--files <path>...] [--message-file <path>]` work end to end
+through the real binary.
 
 ## Design
 
@@ -23,7 +24,8 @@ Make `continual event <event> [--files <path>...]` work end to end through the r
 
 - The real binary runs an event's mapped steps against a fixture git repository.
 - `--files` gives `on_agent_file_edit` its files.
-- `on_commit_msg` passes the message file given on the command line as `{message_file}`.
+- `--message-file` gives `on_commit_msg` its message file, which reaches tool steps as
+  `{message_file}` and the `commit-messages` check as the message to check.
 - An unknown event exits with code 2 and lists the events the configuration maps.
 - A git error while reading the event's files exits with code 2 and says why.
 

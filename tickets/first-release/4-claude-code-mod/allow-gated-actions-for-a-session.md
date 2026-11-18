@@ -22,8 +22,8 @@ The `/allow` bullet in [Harness: the review gate](../../../docs/harness.md#the-r
 ## Behaviours to test
 
 - `/allow commit`, `/allow push` and `/allow pr` each allow one action, alone or together, and
-  an allowed action is answered `allow`, the only answer that overrides the harness's own
-  `ask` rules.
+  an allowed action is answered `allow` when the command holds nothing else but `cd` and
+  `git add`; a command that chains anything else is answered `pass`.
 - `/allow off` withdraws every allowance.
 - Merges always ask, and bypasses stay blocked, under any allowance.
 - Only a contributor message gives or withdraws an allowance.

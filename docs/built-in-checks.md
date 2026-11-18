@@ -16,9 +16,9 @@ Check, check name, finding, language and guarded change mean what the
 
 - **Check entry**: one item of a check step's `checks` list: the check's name and its
   settings.
-- **Per-file check**: a check that inspects files one at a time (comments). In an event it
-  inspects the event's files; otherwise every file of its package that git tracks or would
-  track.
+- **Per-file check**: a check that inspects files one at a time (comments). In an event that
+  carries files it inspects those. Otherwise, in `continual run` and in an event without
+  files, it inspects every file of its package that git tracks or would track.
 - **Repository check**: a check that needs the whole repository or its history
   (architecture, guard, commit messages). It ignores an event's files.
 - **Unit**: what the architecture check draws boundaries between: a Rust crate, and in other
@@ -43,7 +43,7 @@ check = "architecture"
 
 [[steps.conventions.checks]]
 check = "guard"
-approval-label = "guard-approved"
+approval_label = "guard-approved"
 protected = ["deny.toml", ".github/**", "xtask/**"]
 ```
 
@@ -56,8 +56,11 @@ protected = ["deny.toml", ".github/**", "xtask/**"]
   clone, says why, and its step could not run (exit code 2). It never reports "no findings"
   instead.
 - No check passes vacuously. A per-file check with no file in a supported language to inspect
-  fails, and so does an architecture check whose configured units do not exist. In an event,
-  a check step with no matching files is skipped, not passed.
+  fails, and so does an architecture check whose configured units do not exist. In an event
+  that carries files, a per-file check with none of them in a supported language is skipped,
+  not passed, while the repository checks of its step still run. A step is skipped only when
+  every check in it was, and a skipped step does not fail the run
+  ([Pipeline: placeholders](pipeline.md#placeholders)).
 - Paths in a check's settings are relative to the package that holds the step.
 - A file whose language has no adapter is not inspected by per-file checks.
 
@@ -97,31 +100,33 @@ check = "architecture"
 name = "core"
 units = ["continual-core"]
 external = []
-forbidden-imports = ["std::fs", "std::net", "std::env", "std::process", "std::io", "std::thread"]
+forbidden_imports = ["std::fs", "std::net", "std::env", "std::process", "std::io", "std::thread"]
 
 [[steps.conventions.checks.layers]]
 name = "adapters"
 units = ["crates/adapters/*"]
-may-depend-on = ["core"]
+may_depend_on = ["core"]
 independent = true
 
 [[steps.conventions.checks.layers]]
 name = "composition-roots"
 units = ["continual"]
-may-depend-on = ["core", "adapters"]
+may_depend_on = ["core", "adapters"]
 
 [[steps.conventions.checks.layers]]
 name = "tooling"
 units = ["xtask"]
 ```
 
+- A layer names its units by name, such as `continual-core`, or by a glob of the directories
+  that hold them, such as `crates/adapters/*`.
 - Every unit must belong to a layer, and every unit a layer names must exist.
-- A unit depends only on its own layer's units and on the layers in `may-depend-on`. In an
+- A unit depends only on its own layer's units and on the layers in `may_depend_on`. In an
   `independent` layer, units do not depend on each other except through declared
   `couplings`, each with a reason.
 - `external`, when present, is the allow-list of external dependencies, each with a reason.
   Without it, a layer's external dependencies are not checked.
-- `forbidden-imports` lists import paths that the layer's source files must not use.
+- `forbidden_imports` lists import paths that the layer's source files must not use.
 - A unit may depend on itself, to enable test features.
 
 This repository's `arch.toml` becomes this check's settings in `continual.toml`.
@@ -144,10 +149,16 @@ change never leaves an agent stuck. With `--ci --labels <list>`, the step fails 
 holds the approval label.
 
 The guard reads its own settings from the base revision's `continual.toml`, not the working
-tree's, so a change cannot loosen the guard that judges it. `continual guard --ci --labels
-<list>` runs the guard on its own, outside any step, with those settings, so CI runs it even
-when a change removes it from the steps. It fails when the base revision's configuration has
-no guard entry.
+tree's, so a change cannot loosen the guard that judges it. When the base revision has no
+`continual.toml`, or none with a guard entry, the guard judges with its built-in settings: the
+default approval label and no `protected` path beyond `continual.toml` itself. The change that
+gives a repository its first guard entry is therefore a guarded change like any other,
+reported for its `continual.toml`.
+
+`continual guard --ci --labels <list>` runs the guard on its own, outside any step, with the
+same settings, so CI runs it even when a change removes it from the steps. With several guard
+entries at the base revision, such as one in each package, it runs each with its own
+settings.
 
 ### Commit messages
 
@@ -184,8 +195,10 @@ reason = "name the ticket the change works on"
 - A pattern that is not a valid regular expression is a configuration error, reported with its
   line before anything runs.
 
-Conventional Commits stay with the tools that already check them, such as `committed`, run as
-tool steps.
+Conventional Commits stay with the tools that already check them, such as `committed`. On
+`on_commit_msg` they run as tool steps that take `{message_file}`. Over a pull request's
+commits they stay a CI job of their own until tool steps have a placeholder for the range
+([Pipeline: placeholders](pipeline.md#placeholders)).
 
 ## Design
 
@@ -220,6 +233,9 @@ in (M5). Findings are the core's `Finding` values, labelled with the check's `Ch
   manifests with `toml`, the libraries `xtask` uses today.
 - Test items carry a token fingerprint, so the core can tell a changed test from a reformatted
   one without knowing the language.
+- The guard's base settings need no port of their own. `ChangeHistory` gives the text of the
+  base revision's `continual.toml`, and `ConfigSource` turns that text into configuration
+  input ([Pipeline](pipeline.md#ports-and-adapters)).
 
 ## Decisions
 
@@ -245,8 +261,10 @@ in (M5). Findings are the core's `Finding` values, labelled with the check's `Ch
 - **The guard judges with the base revision's settings, every `continual.toml` is protected,
   and CI runs the guard outside the steps.** A change that removes a protected path, a check
   or the guard itself is a guarded change that the unchanged guard reports. Rejected: reading
-  the guard's settings from the working tree, which lets a change approve itself; and running
-  the guard in CI only as a step, which a change could remove.
+  the guard's settings from the working tree, which lets a change approve itself; running
+  the guard in CI only as a step, which a change could remove; and refusing to run when the
+  base revision has no guard entry, which the change that introduces the guard could never
+  pass.
 - **Conventional Commits stay with existing tools.** Continual adds the attribution rule that
   tools do not check, and a repository's own forbidden and required patterns, and runs
   `committed` or commitlint as tool steps for the rest. Rejected: reimplementing a

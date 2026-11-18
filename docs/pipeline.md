@@ -10,7 +10,7 @@ passes on one machine passes everywhere ([pipeline](../VISION.md#pipeline),
 
 ## Concepts
 
-Step, required step, pipeline, event, package, check and tool mean what the
+Step, required entry, pipeline, event, package, check and tool mean what the
 [domain glossary](../CONVENTIONS.md#domain-glossary) says. In addition:
 
 - **Root configuration**: the `continual.toml` at the top of a repository. It holds the
@@ -92,7 +92,9 @@ depends_on = ["fmt"]
   of any other version refuses to run, exits with code 2 and prints the command that installs
   the pinned version, so a contributor's machine and CI always run the same release.
   `--unpinned` skips this check and says so on its first line; it exists for running a build
-  of Continual's own working tree ([Checks: self-hosting](checks.md#self-hosting)).
+  of Continual's own working tree ([Checks: self-hosting](checks.md#self-hosting)). The
+  version is checked before anything else in the file, and a binary of another version reports
+  only the mismatch, since the rest of the file may hold keys that binary does not know.
 - `[steps.<name>]` defines a step. A step name follows the rules of a check name: lowercase
   ASCII letters, digits and single hyphens between them, starting with a letter.
 - `run` makes it a tool step and `checks` makes it a check step; a step has exactly one of
@@ -120,10 +122,12 @@ it`. The problems it reports are an unknown key or value, a pipeline entry namin
 step, a step listed twice in one pipeline, a starting entry with `depends_on`, a later entry
 without it, an entry depending on one that is not above it, an unknown pipeline or package in
 a pipeline's `depends_on`, a cycle among pipelines (named in order), a step with both or
-neither of `run` and `checks`, a timeout that is not a positive duration, and a version that
-does not match the binary.
+neither of `run` and `checks`, and a timeout that is not a positive duration. A version that
+does not match the binary is reported alone, before any of these.
 
 ### Commands
+
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
 
 A tool step's `run` is split into words the way a shell splits them, with quotes grouping
 words, but no shell runs it. There are no pipes, redirections, `&&`, globbing or variable
@@ -144,12 +148,15 @@ gives up, so every tool runs with a time limit.
 - A step's timeout counts only its own tool's running time, not the time it waits for its
   dependencies.
 - When a tool runs past its timeout, Continual stops it and every process it started: first
-  it asks them to stop (`SIGTERM` to the process group on Unix, `CTRL_BREAK` to the job on
-  Windows), and after 10 seconds it kills whatever is left.
+  it asks them to stop (`SIGTERM` to the tool's process group on Unix, `CTRL_BREAK` to it on
+  Windows), and after 10 seconds it kills whatever is left (the process group on Unix, the
+  tool's job object on Windows).
 - The step then fails with `timed out after 20m`, and it counts as failed for `required`, so a
   timed-out required entry skips its downstream like any other failure.
 - Interrupting Continual (Ctrl-C) stops every running tool the same way, skips the entries not
-  started, reports the outcome of every finished one, and exits with code 130.
+  started, reports the outcome of every finished one, and exits with code 130. So does telling
+  it to stop (`SIGTERM` or `SIGHUP` on Unix, closing its console on Windows), as a cancelled CI
+  job or a harness that gives up on a hook does, so no tool outlives Continual.
 - Check steps run inside Continual. The `git` commands behind them run with git's prompts
   turned off and a time limit of their own, so a credential prompt or a stuck repository makes
   the check could-not-run instead of hanging ([Built-in checks](built-in-checks.md#design)).
@@ -162,8 +169,8 @@ A placeholder is a whole word in `run`. Continual expands it before the tool sta
 
 | Placeholder | Becomes | Provided by |
 | --- | --- | --- |
-| `{files}` | One word per file, relative to the step's package directory | an event with files |
-| `{message_file}` | The path of the commit message file | the `commit-msg` event |
+| `{files}` | One word per file, relative to the step's package directory; a path that starts with `-` gets a `./` in front, so no tool reads it as an option | an event with files |
+| `{message_file}` | The path of the commit message file | the `on_commit_msg` event |
 
 A step whose `run` uses a placeholder that the current run does not provide is a configuration
 error for that run (exit code 2, naming the step and the placeholder), never a silent skip.
@@ -180,8 +187,9 @@ files = ["*.rs"]
 ```
 
 `files` filters `{files}` with globs relative to the package. When an event has no file that
-matches, the step is skipped and reported as skipped, not as passed. Placeholders stay a fixed
-set until a use needs more; they are not general variables.
+matches, the step has nothing to do: it is skipped and reported as skipped, not as passed.
+That is not a failure. The entries that depend on it still run, and it does not fail the run.
+Placeholders stay a fixed set until a use needs more; they are not general variables.
 
 CI inputs reach Continual as the flags `cargo xtask` takes today: `--base`, `--range`,
 `--title`, `--body`, and `--ci` with `--labels`. They go to the built-in checks that use them
@@ -200,8 +208,9 @@ depend on each other run at the same time too.
 
 When more entries are ready than there are free jobs, the order is fixed, so every machine
 schedules the same way: the pipelines a pipeline depends on come before it, in the order its
-`depends_on` lists them, the pipelines asked for come in the order the command names them, and
-within a pipeline the entry written first starts first.
+`depends_on` lists them, the pipelines asked for come in the order the command names them, a
+pipeline that runs in several packages takes them in the order of their names, the root last,
+and within a pipeline the entry written first starts first.
 
 - A step fails when its tool exits with a non-zero code, is killed or runs past its timeout,
   when a check reports findings, or when it could not run.
@@ -213,7 +222,9 @@ within a pipeline the entry written first starts first.
   that depends on it is skipped.
 - A step listed in several pipelines of one run runs once for each of them; Continual never
   reuses an outcome.
-- The run fails when any entry failed. Skipped entries never pass.
+- An entry that an [event](#events) leaves with no matching files is skipped without failing:
+  it counts as finished, so the entries that depend on it still run.
+- The run fails when any entry failed. A skipped entry is never reported as passed.
 
 With the configuration above, `continual run ci` starts with `fmt`. When it passes, `clippy`
 and `conventions` start together, and `test` follows `clippy`. A failing `fmt` skips
@@ -222,6 +233,8 @@ the run fails either way. `continual run quick` runs `fmt` and then `conventions
 steps on a shorter path.
 
 ### Output and exit codes
+
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
 
 Continual passes each tool's output through as the tool writes it and judges the tool by its
 exit code alone. It never parses, buffers or reinterprets a tool's output, and thresholds such
@@ -241,10 +254,10 @@ as a minimum coverage are the tool's own flags.
 
 | Exit code | Meaning |
 | --- | --- |
-| 0 | Every entry passed. |
+| 0 | No entry failed: each one passed, or was skipped for having no matching files. |
 | 1 | At least one entry failed, and every failed entry did run. |
 | 2 | The run could not start (invalid configuration, unknown pipeline, wrong version), or a step could not run. |
-| 130 | The run was interrupted. |
+| 130 | The run was interrupted or told to stop. |
 
 Continual never caches. Every step runs every time a pipeline asks for it, and tools keep
 their own incremental state, such as cargo's `target/` or `tsc --incremental`.
@@ -354,10 +367,11 @@ on_commit_msg = ["messages"]
 on_pre_push = ["ci"]
 ```
 
-`continual event <event> [--files <path>...]` runs an event. The event names do not depend on
-any harness: the [Claude Code mod](harness.md) calls the agent events, and the git hooks that
-`continual install git` writes call the git ones. Hook managers such as lefthook or husky can
-call `continual event` themselves instead.
+`continual event <event> [--files <path>...] [--message-file <path>]` runs an event.
+`--files` gives `on_agent_file_edit` its files and `--message-file` gives `on_commit_msg` its
+message. The event names do not depend on any harness: the [Claude Code mod](harness.md) calls
+the agent events, and the git hooks that `continual install git` writes call the git ones.
+Hook managers such as lefthook or husky can call `continual event` themselves instead.
 
 | Event | When | Files |
 | --- | --- | --- |
@@ -367,11 +381,16 @@ call `continual event` themselves instead.
 | `on_commit_msg` | `git commit`, after the message | None; `{message_file}` is provided |
 | `on_pre_push` | `git push` | None |
 
-An event runs its pipelines and the pipelines they depend on, like `continual run`. With files,
-a package's pipelines run only when the package owns at least one of them, and its `{files}`
-holds only its own. The root's pipelines run on every event, since they usually hold
-repository checks; a root step that takes `{files}` and owns none of the event's files is
-skipped. `on_agent_turn_end` with no uncommitted changes runs nothing and passes.
+An event runs its pipelines and the pipelines they depend on, like `continual run`. An event
+without files runs them exactly as `continual run` does: nothing is filtered or skipped, and a
+per-file check inspects every file of its package. With files, a package's pipelines run only
+when the package owns at least one of them, and its `{files}` holds only its own. The root's
+pipelines run on every event, since they usually hold repository checks; a root step that
+takes `{files}` and owns none of the event's files is skipped. `on_agent_turn_end` with no
+uncommitted changes runs nothing and passes.
+
+A deleted file is never among an event's files, since no tool can read it, and a renamed file
+appears under its new name.
 
 ## Design
 
@@ -385,8 +404,8 @@ The pipeline's decisions are core code in `continual-core`, in feature modules:
   `[workspace.steps]` and `[workspace.pipelines]`. Building a `Workspace` resolves every
   reference and rejects unknown steps, pipelines and packages, entries that break the
   starting-entry and above-only rules, cycles among pipelines and malformed steps (V3), so a
-  `Workspace` value always holds valid graphs, each with its entries in written order. Step, pipeline and package names are
-  value objects with `CheckName`'s parsing rules.
+  `Workspace` value always holds valid graphs, each with its entries in written order. Step,
+  pipeline and package names are value objects with `CheckName`'s parsing rules.
 - **`pipeline`**: a `Run` plans the pipelines asked for and the pipelines they depend on, then
   works as a state machine: it says which entries are ready, in the fixed order the
   [pipelines](#pipelines) section gives, records each outcome, skips the
@@ -403,9 +422,13 @@ on the `ToolRunner` up to the job limit, run every ready check entry in the core
 
 ### Ports and adapters
 
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+
+> Planned: [Run steps on git and agent events](../tickets/first-release/3-events/story.md)
+
 | Port | What the core asks | Adapter |
 | --- | --- | --- |
-| `ConfigSource` | The root and package configurations, starting from a directory, as core configuration input with each item's location | `crates/adapters/toml-config` |
+| `ConfigSource` | The root and package configurations, starting from a directory, as core configuration input with each item's location; and the same input from one configuration's text, for the guard's base revision ([Built-in checks](built-in-checks.md#guard)) | `crates/adapters/toml-config` |
 | `ToolRunner` | Start a command in a directory with a time limit; hand back, as they happen, each line a running command writes (with its stream) and each command's outcome (exit status, killed, timed out), while others keep running; stop every running command on request | `crates/adapters/process` |
 | `ChangeHistory` | The staged files and the files with uncommitted changes, for events | `crates/adapters/git` ([Built-in checks](built-in-checks.md#design)) |
 | `Report` | Pass a step's output line through, show why a step failed, show the verdict | `crates/adapters/terminal` |
@@ -418,16 +441,20 @@ on the `ToolRunner` up to the job limit, run every ready check entry in the core
 - `process` launches tools with `std::process`, one thread per running tool, reads each
   stream line by line as the tool writes it, and reports a program that is not found as its
   own error so the core can print the install command. It enforces each command's time limit
-  (A3): it starts every tool in a process group of its own on Unix and a job object on
-  Windows, so stopping a tool stops everything the tool started, and it measures the time
-  itself, so the core needs no clock. The composition root turns Ctrl-C into a request to stop
-  every running command.
+  (A3): it starts every tool in a process group of its own, and on Windows in a job object as
+  well, so stopping a tool stops everything the tool started, and it measures the time
+  itself, so the core needs no clock. The composition root turns Ctrl-C, and a signal that
+  tells Continual to stop, into a request to stop every running command.
 - `terminal` writes to the outputs the composition root gives it: standard output and error for
   the CLI, or buffers that the harness adapter returns as the hook's response
   ([Harness](harness.md#design)). It adds the step prefix when the run holds more than one
   entry.
 
 ### Composition root
+
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+
+> Planned: [Run steps on git and agent events](../tickets/first-release/3-events/story.md)
 
 `crates/continual/src/main.rs` reads the current directory, the CPU count and the binary's
 version, builds the adapters, and hands them with those values to the core (X1, X4). `cli.rs`
@@ -496,3 +523,19 @@ each, and maps the verdict to the exit code (A2).
 - **Stopping a tool stops its whole process tree.** Test runners and build tools start
   processes of their own, and killing only the parent leaves those running. Rejected: killing
   the direct child only.
+- **A step with no matching files is skipped, and that is not a failure.** The entries that
+  depend on it still run and the run can pass, so a commit that touches no Rust file is not
+  refused by a Rust formatter. It is reported as skipped, never as passed. Rejected: counting
+  it as passed, which reports a check that checked nothing; and skipping what depends on it,
+  which lets one file filter switch off the rest of a pipeline.
+
+## Open questions
+
+- How check entries run beside tools. The core holds no threads, so a check entry that the use
+  case runs inline holds up the lines and completions of the tools running at the same time,
+  and a stop request with them, and it has no time limit of its own.
+  [Run check steps](../tickets/first-release/2-built-in-checks/run-check-steps.md) decides it.
+- What a step does when an event's files do not fit the platform's command-line limit: run the
+  tool once for each batch of files, as `xargs` does, or report that the step could not run.
+  [Pass an event's files to its steps](../tickets/first-release/3-events/pass-an-events-files-to-its-steps.md)
+  decides it.

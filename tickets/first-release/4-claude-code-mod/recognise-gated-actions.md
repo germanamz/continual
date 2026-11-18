@@ -25,8 +25,9 @@ commit, a push, a pull-request creation or a merge, and answer "ask" for the act
 
 ## Behaviours to test
 
-- Commits, pushes, `gh pr create` and `gh pr merge` are recognised, including through
-  `git -C <dir>` and a full path to the program.
+- Commits, pushes, `gh pr create`, `gh pr merge` and a `gh api` call that writes to a
+  repository's pulls are recognised, including through `git -C <dir>` and a full path to the
+  program. A `gh api` call that only reads pulls is not.
 - In a chain of segments, any gated segment makes the command gated.
 - A recogniser in `[review_gate.commands]` adds a tool, such as `glab mr create`.
 - A gated action listed in `ask` is answered `ask`; one left out of `ask` is answered `pass`; the

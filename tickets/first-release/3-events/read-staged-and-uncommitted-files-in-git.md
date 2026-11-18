@@ -25,6 +25,7 @@ and [Pipeline: timeouts](../../../docs/pipeline.md#timeouts).
 - The `ChangeHistory` contract suite for the staged and uncommitted files passes against the
   adapter in fixture repositories.
 - Untracked files count as uncommitted; ignored files do not.
+- A deleted file is in neither list, and a renamed file appears under its new name.
 - A git command that would prompt, or runs past the adapter's limit, is reported as an error.
 
 ## Done when

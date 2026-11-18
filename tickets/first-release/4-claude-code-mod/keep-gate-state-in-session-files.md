@@ -29,3 +29,4 @@ The `GateState` notes in [Harness: design](../../../docs/harness.md#design).
 ## Done when
 
 - `arch.toml` classifies the new crate.
+- The open question on where the gate's state lives in docs/harness.md is decided and removed.

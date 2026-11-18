@@ -57,9 +57,8 @@ Work that is dropped loses its ticket and its planned markers in the same change
   each other. Tusk refuses cycles in both.
 - Every ticket with no children is a task with `points` of 1, 2 or 3. Work estimated at 5 or
   more becomes a story, split into tasks, and carries no points itself; its size is the sum of
-  its tasks. Each task is workable on its own: it starts from what is merged, needs no other
-  open ticket's code, and its pull request meets the definition of done by itself.
-  `tickets/README.md` gives a guide to what each size usually holds.
+  its tasks. Each task is workable on its own, as K9 defines it. `tickets/README.md` gives a
+  guide to what each size usually holds.
 - Every agent session starts with the vision and the list of open tickets (the `open-tickets`
   alias).
 - `tusk doctor` reports a ticket outside `tickets/`, a file in `tickets/` that is not a
@@ -76,9 +75,9 @@ The full rule is R1. In practice:
   first commit or push after each of their messages, whatever form the command takes. Approving
   that commit or push opens a wave. Inside a wave, pull requests still ask and bypasses are
   still blocked.
-- These commands are always blocked: `--no-verify` or `-n` on a commit, changes to
-  `core.hooksPath`, `LEFTHOOK=0` or `LEFTHOOK_EXCLUDE`, `lefthook uninstall`, force pushes, and
-  any command naming the guard approval label.
+- These commands are always blocked: `--no-verify` on a commit or a push, `-n` on a commit,
+  changes to `core.hooksPath`, `LEFTHOOK=0` or `LEFTHOOK_EXCLUDE`, `lefthook uninstall`, force
+  pushes, and any command naming the guard approval label.
 
 ### Allowances
 
@@ -180,6 +179,12 @@ closing a wave on the next message leaves the allowance in place. `guard-bash.sh
 bypass checks first, then lets a commit, push or pull-request creation through without asking
 when the allowance names its step.
 
+Claude Code applies the `ask` rules in its settings whatever a hook answers, so the rule for
+`gh pr create` leaves `.claude/settings.json`: an allowance could not lift it, and
+`guard-bash.sh` already asks for every pull request without one. The rule for `gh pr merge`
+stays, since merges are never allowed. `UserPromptSubmit` receives a `/allow` message as the
+contributor typed it.
+
 ### Tusk
 
 - `tusk.toml` is the committed manifest. The index in `.tusk/` is not committed.
@@ -192,8 +197,8 @@ when the allowance names its step.
   `tusk doctor` warns when a named file is gone, and `names-path=tickets/<path>.md*` finds the
   planned markers that point at a ticket.
 - The rules `ticket-location`, `tickets-folder` and `no-specs-or-plans` turn K1 and K5 into
-  `tusk doctor` errors. `ticket-points`, `task-size` and `parent-points` do the same for K9,
-  through the `points` property the manifest adds to tickets.
+  `tusk doctor` errors. `task-size` and `parent-points` do the same for K9, through the
+  `points` property the manifest adds to tickets.
 - Semantic queries use Ollama with `nomic-embed-text`, with the query and document prefixes and
   the lexical weight of 0.5 taken from Tusk's own measured settings. Without Ollama, structural
   queries still work and semantic ones fail.
@@ -252,11 +257,3 @@ and follow-ups. Rules R3 to R5 govern titles, descriptions and attribution.
 - **The generated Tusk mod is not committed.** Every Tusk upgrade rewrites it, and each
   contributor runs `tusk claude install` anyway to approve the MCP server.
 - **`tusk doctor` is not in CI**, since CI would need Tusk and Ollama installed.
-
-## Open questions
-
-- Whether an `allow` decision from `guard-bash.sh` overrides the `ask` permission rules for
-  `gh pr create` in `.claude/settings.json`, or those rules move into the hook so that an
-  allowance can lift them, and whether `UserPromptSubmit` receives a `/allow` message as typed.
-  [Let a contributor allow commits, pushes and pull requests](../tickets/let-a-contributor-allow-commits-pushes-and-pull-requests.md)
-  decides both.

@@ -21,8 +21,8 @@ any command naming the guard's approval label, each with its reason.
 
 ## Behaviours to test
 
-- `--no-verify` and `-n` on a commit, a change to `core.hooksPath`, and a force push are
-  blocked with their reasons.
+- `--no-verify` on a commit or a push, `-n` on a commit, a change to `core.hooksPath`, and a
+  force push are blocked with their reasons. `-n` on a push, which is a dry run, is not.
 - A command naming the guard's approval label is blocked, the label read from the guard's
   settings.
 - `[[blocked_commands]]` blocks by leading `words` and by `env` assignments, with its reason.

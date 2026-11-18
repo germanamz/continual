@@ -23,8 +23,9 @@ Contributor, wave and allowance mean what [Workflow](workflow.md#concepts) says.
 - **Gated action**: a commit, a push, a pull-request creation or a merge.
 - **Bypass**: a command that skips or disables checks, such as `git commit --no-verify`.
 - **Gate decision**: what Continual answers about a command an agent wants to run: `allow`,
-  which overrides the harness's own permission rules; `pass`, which raises no objection and
-  leaves those rules to decide; `ask` the contributor; or `block`, with the reason.
+  which skips the harness's own permission prompt; `pass`, which raises no objection and
+  leaves the harness to decide; `ask` the contributor; or `block`, with the reason. No answer
+  lifts a deny or ask rule the contributor keeps in the harness's own settings.
 
 ## Behaviour
 
@@ -38,20 +39,27 @@ entry that is not Continual's. Running it again changes nothing. Each hook runs
 | --- | --- |
 | `PreToolUse` on Bash | Answers the gate decision for the command. |
 | `PostToolUse` on Edit and Write | Runs the `on_agent_file_edit` event with the edited file and sends failures back to the agent. |
-| `PostToolUse` on Bash | Opens a wave when an approved commit or push has run. |
+| `PostToolUse` and `PostToolUseFailure` on Bash | Opens a wave when an approved commit or push has run, whether it succeeded or failed. |
 | `UserPromptSubmit` | Closes the wave, and reads `/allow` in the contributor's message. |
 | `Stop` | Runs the `on_agent_turn_end` event and waits for it before the turn ends. |
 
-Each hook entry gets a timeout long enough for its event's whole run: the sum of the timeouts
-of the steps in the event's pipelines. Claude Code therefore never cuts a hook off before
-Continual's own limits stop a hung tool. Running `continual install claude` again after the
-configuration changes brings the timeouts up to date.
+Each hook entry that runs an event gets a timeout that covers the event's longest possible
+run. Continual adds up, for every pipeline the event runs, the pipelines they depend on and
+every package that has them, the timeout of each tool step and the 10 seconds a tool gets to
+stop, plus an allowance for each check step, which has no timeout of its own. Claude Code
+therefore never cuts a hook off before Continual's own limits stop a hung tool. A hook it did
+cut off would give no answer, and the turn would end unchecked. Running
+`continual install claude` again after the configuration changes brings the timeouts up to
+date.
 
 When the configuration cannot be loaded or pins another version, the gate still answers, with
 the built-in rules alone: the default `ask` list and the built-in bypasses. It says so, so the
 agent can still run the install command or fix the configuration. If Continual cannot answer
-a `PreToolUse` hook at all, because it crashed or cannot read the payload, the command is
-blocked. The other hooks warn and let the agent continue.
+a `PreToolUse` hook, because it cannot read the payload or fails inside, the command is
+blocked. Claude Code blocks only on a deny answer or exit code 2, so the hook turns every
+failure it can catch, a panic included, into exit code 2. A hook that never starts, or that
+Claude Code cuts off at its timeout, gives no answer, and Claude Code's own permission rules
+then decide. The other hooks warn and let the agent continue.
 
 ### Agent events
 
@@ -71,34 +79,41 @@ blocked. The other hooks warn and let the agent continue.
 
 ```toml
 [review_gate]
-ask = ["commit", "push", "pull-request", "merge"]
+ask = ["commit", "push", "pr", "merge"]
 ```
 
-- Continual asks the contributor before every pull-request creation or merge, and before the
-  first commit or push after each of their messages, for each gated action listed in `ask`.
-  The list above is the default. An action left out of `ask` never asks.
-- Approving a commit or push opens a wave: later commits and pushes go through without asking
-  until the contributor's next message. Inside a wave, pull requests still ask and bypasses are
-  still blocked.
+- Continual asks the contributor before every pull-request creation (`pr`) or merge, and
+  before the first commit or push after each of their messages, for each gated action listed
+  in `ask`. The list above is the default. An action left out of `ask` never asks.
+- Approving a commit or push opens a wave, whether the command then succeeds or fails: later
+  commits and pushes go through without asking until the contributor's next message. Inside a
+  wave, pull requests and merges still ask and bypasses are still blocked.
 - A contributor message that starts with `/allow` and names gated actions, `commit`, `push`
   or `pr`, allows them for the rest of the session, until `/allow off`. Each action is allowed
   on its own, merges are never allowed, and bypasses stay blocked. Only the contributor's own
   messages give or withdraw an allowance.
 - Continual recognises a gated action whatever form the command takes: `git -C <dir>`, a full
   path to `git`, an `env` prefix, a subshell, or a command chained with `&&`, `;` or a pipe.
-  Git commits and pushes, and pull requests through `gh`, are recognised by default, and
+  Git commits and pushes are recognised by default, and so are pull requests through `gh`:
+  `gh pr create`, `gh pr merge`, and a `gh api` call that writes to a repository's pulls.
   `[review_gate.commands]` adds recognisers for other tools, such as `glab mr create`.
-- Continual answers `allow` only for a gated action that the contributor's explicit `/allow`
-  covers, and that answer overrides an `ask` rule the contributor keeps in Claude Code's own
-  settings. Inside a wave, and for every command that is neither gated nor a bypass, it answers
-  `pass`, so Claude Code's own permission rules still decide.
+- Continual answers `allow` only for what the contributor approved: a commit or push inside a
+  wave, or a gated action their `/allow` covers, and only when the command holds nothing else
+  but `cd` and `git add`. A command that chains anything else gets `pass`, and so does every
+  command that is neither gated nor a bypass, so Claude Code's own permission rules decide.
+- `allow` skips Claude Code's permission prompt and nothing more. Claude Code applies the deny
+  and ask rules in its own settings whatever a hook answers, so an `ask` rule a contributor
+  keeps there for a gated action still asks inside a wave or an allowance. A repository that
+  wants waves and allowances to cover an action leaves it to `[review_gate] ask` alone, and
+  `continual install claude` names every `ask` rule in the settings that matches a gated
+  action.
 
 ### Blocked commands
 
-These bypasses are always blocked: `--no-verify` or `-n` on a commit, a change to
-`core.hooksPath`, a force push, and any command that names the guard's approval label. Changes
-to the hook files themselves, such as `.claude/settings.json`, are the guard's business,
-through its `protected` list. A repository adds its own:
+These bypasses are always blocked: `--no-verify` on a commit or a push, `-n` on a commit, a
+change to `core.hooksPath`, a force push, and any command that names the guard's approval
+label. Changes to the hook files themselves, such as `.claude/settings.json`, are the guard's
+business, through its `protected` list. A repository adds its own:
 
 ```toml
 [[blocked_commands]]
@@ -123,7 +138,9 @@ allowance too.
   segments of words and variable assignments, so the core classifies words and never parses
   shell syntax.
 - **Installer.** `continual install claude` lives in the same adapter. Writing hook entries
-  into a settings file has no domain rule, so it takes no port and no core type (W1).
+  into a settings file has no domain rule, so it adds no port (W1). It loads the workspace as
+  every command does and asks the core for each event's longest run, which it writes as the
+  hook's timeout.
 - **Core.** The `gate` feature module classifies a command's segments as a gated action, a
   bypass or neither, from the built-in and configured recognisers, and runs the wave and
   allowance state machine. It returns a gate decision.
@@ -145,10 +162,10 @@ allowance too.
   repository's configuration does not change when it adds one.
 - **The adapter splits shell commands; the core classifies them.** Shell syntax is a format,
   translated at the edge (A1). Which commands are gated or bypasses is a rule.
-- **A gate that cannot answer blocks; a gate without configuration falls back.** A hook that
-  cannot answer must not let a bypass through, and a broken or mismatched configuration must
-  not lock the agent out of fixing it. Rejected: blocking every command whenever the
-  configuration fails to load.
+- **A gate that fails blocks; a gate without configuration falls back.** A hook that fails
+  must not let a bypass through, so every failure it can catch becomes a block, and a broken
+  or mismatched configuration must not lock the agent out of fixing it. Rejected: blocking
+  every command whenever the configuration fails to load.
 - **Commands are matched by their words, not by the files they write.** Recognising every
   command that could rewrite a hook file needs shell analysis Continual does not do; the
   guard reports changes to those files instead.
@@ -158,10 +175,34 @@ allowance too.
   contributor only with checked work, at the cost of slower turns. Rejected: running them in
   the background, and cutting them off at a short hook timeout, either of which lets a turn end
   on unchecked work.
-- **Only an explicit allowance overrides the harness's own rules.** A contributor's `ask` rules
-  in Claude Code give way only to their own `/allow`. Rejected: answering `allow` to every
-  command Continual has no objection to, which would silently lift those rules.
+- **`allow` only for what the contributor approved, and never above the harness's own rules.**
+  A wave and an allowance are the contributor's explicit approval, so Continual answers `allow`
+  for the commands they cover and the contributor is not asked twice. Claude Code keeps its
+  deny and ask rules above any hook's answer, and Continual does not work around that: a
+  contributor who writes an `ask` rule there is asked. Rejected: answering `allow` to every
+  command Continual has no objection to, which would skip Claude Code's prompt for commands
+  nobody approved; and answering `pass` inside a wave, which leaves Claude Code asking again
+  for every commit the wave was opened to cover.
 - **Allowances end with the session.** They come from the contributor's messages, as in
   [Workflow](workflow.md#decisions). Rejected: allowing actions in `continual.toml` for every
   session, beyond leaving an action out of `ask`, which a repository decides for everyone.
+
+## Open questions
+
+- How a hook entry's timeout stays in step with the configuration between runs of
+  `continual install claude`. A step timeout raised afterwards leaves the entry too short, and
+  nothing reports it.
+  [Install the Claude Code mod](../tickets/first-release/4-claude-code-mod/install-the-claude-code-mod.md)
+  decides it.
+- Whether the gate falls back to the base revision's configuration, as the guard does, instead
+  of the built-in rules alone when the working tree's cannot be loaded. As it stands, an agent
+  that breaks `continual.toml` drops the repository's own `[[blocked_commands]]` and
+  recognisers.
+  [Fall back to the built-in gate rules](../tickets/first-release/4-claude-code-mod/fall-back-to-the-built-in-gate-rules.md)
+  decides it.
+- Where the gate's state lives so that the agent it gates cannot write it. Any command the
+  agent runs can write a file in the temporary directory, and the state holds allowances as
+  well as the wave.
+  [Keep gate state in session files](../tickets/first-release/4-claude-code-mod/keep-gate-state-in-session-files.md)
+  decides it.
 

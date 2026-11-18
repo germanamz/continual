@@ -12,12 +12,12 @@ status: pending
 
 ## Goal
 
-Add the architecture check's `forbidden-imports` rule in the core, over the imports a
+Add the architecture check's `forbidden_imports` rule in the core, over the imports a
 language adapter reports, with the imports operation added to `LanguageSyntax`.
 
 ## Design
 
-The `forbidden-imports` bullet in [Built-in checks: architecture](../../../docs/built-in-checks.md#architecture).
+The `forbidden_imports` bullet in [Built-in checks: architecture](../../../docs/built-in-checks.md#architecture).
 
 ## Behaviours to test
 

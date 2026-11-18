@@ -36,6 +36,10 @@ cargo, built from source or downloaded, and the releases that repositories pin i
   release. A release workflow, triggered by that release, builds the executables on each
   platform, attaches them with their checksums, and publishes the product crates to
   crates.io in dependency order.
+- release-please runs with a token of its own, a GitHub App's or a fine-grained personal
+  access token kept as a repository secret, not the workflow's default token. GitHub starts no
+  workflow on its own for an event the default token creates, so with it the release pull
+  request's checks would not run by themselves and the release would start no build.
 - The product crates (`continual-core`, the adapters and `continual`) share one version, set
   in `[workspace.package]`, and are published together. Adapter crates are published under
   `continual-` names, such as `continual-git`, while their directories keep the short names.
@@ -58,3 +62,7 @@ cargo, built from source or downloaded, and the releases that repositories pin i
   without a hand-run step. Rejected: tagging releases by hand, which skips review and leaves
   the version to memory; and generating the whole release with cargo-dist, which builds
   executables but neither chooses the version nor writes the changelog.
+- **release-please has a token of its own.** The release pull request then runs the same
+  checks as any pull request, and the release it creates starts the release workflow.
+  Rejected: the workflow's default token with the build jobs moved into the release-please
+  workflow, which builds the release but leaves its pull request without checks.

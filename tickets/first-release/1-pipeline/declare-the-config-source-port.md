@@ -15,7 +15,8 @@ status: pending
 ## Goal
 
 Add the `ConfigSource` port and the use case that loads a `Workspace` through it, turning the
-configuration input into the validated step graph and reporting every problem at its location.
+configuration input into validated steps and pipelines and reporting every problem at its
+location.
 
 ## Design
 

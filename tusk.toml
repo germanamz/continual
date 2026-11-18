@@ -162,7 +162,7 @@ transitions = [
 # Continual's own additions: see CONVENTIONS.md (Design documents and tickets, K).
 
 # Markdown links and inline-code paths become path refs, so `tusk doctor` warns
-# when a page names a file that is gone, and `names-path=tickets/<name>.md*` finds
+# when a page names a file that is gone, and `names-path=tickets/<path>.md*` finds
 # the planned markers that point at a ticket.
 [edge-types.links-to]
 description = "A page links to a workspace file or names it in inline code"
@@ -178,12 +178,8 @@ filter      = "type=ticket AND NOT path=tickets/**"
 description = "tickets/ holds only tickets"
 filter      = "path=tickets/** AND NOT type=ticket"
 
-# Points are relative effort on the Fibonacci scale (K9).
-[rule.ticket-points]
-description = "points are 1, 2, 3, 5, 8, 13 or 21"
-filter      = "type=ticket AND points=* AND NOT (points=1 OR points=2 OR points=3 OR points=5 OR points=8 OR points=13 OR points=21)"
-
-# A ticket with no children is a task of 1, 2 or 3 points; bigger work is a story (K9).
+# Points are relative effort on the Fibonacci scale, and only tasks carry them (K9).
+# A ticket with no children is a task of 1, 2 or 3 points; bigger work is a story.
 [rule.task-size]
 description = "a ticket with no children is a task of 1, 2 or 3 points; split work of 5 or more into tasks under a story"
 filter      = "type=ticket AND NOT parent<- type=ticket AND NOT points=1..3"

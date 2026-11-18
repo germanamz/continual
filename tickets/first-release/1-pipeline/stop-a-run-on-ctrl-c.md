@@ -11,8 +11,9 @@ status: pending
 
 ## Goal
 
-Turn Ctrl-C into a stop request in the composition root, so an interrupted `continual run`
-stops every tool, reports what finished and exits with code 130.
+Turn Ctrl-C, and a signal that tells Continual to stop, into a stop request in the composition
+root, so an interrupted `continual run` stops every tool, reports what finished and exits with
+code 130.
 
 ## Design
 
@@ -22,6 +23,8 @@ notes in [ports and adapters](../../../docs/pipeline.md#ports-and-adapters).
 ## Behaviours to test
 
 - Interrupting the real binary during a run stops the running tools and their children.
+- `SIGTERM` and `SIGHUP` on Unix, and closing the console on Windows, stop the run the same
+  way, so no tool outlives Continual.
 - The entries not started are reported as skipped, the finished ones with their outcome.
 - The exit code is 130.
 

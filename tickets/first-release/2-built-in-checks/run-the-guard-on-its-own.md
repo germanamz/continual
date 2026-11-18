@@ -22,7 +22,8 @@ The `continual guard` sentence in [Built-in checks: guard](../../../docs/built-i
 
 - The real binary runs the guard with no step naming it and reports its findings.
 - With `--ci`, it fails unless `--labels` holds the approval label.
-- It fails when the base revision's configuration has no guard entry.
+- With no guard entry at the base revision, it runs with the built-in settings.
+- With several guard entries at the base revision, it runs each with its own settings.
 
 ## Done when
 

@@ -25,7 +25,7 @@ language adapter reads from manifests, with the manifest operation added to `Lan
 ## Behaviours to test
 
 - A unit in no layer, and a configured unit that does not exist, are each reported.
-- A dependency on a layer outside `may-depend-on` is reported, and one inside it passes.
+- A dependency on a layer outside `may_depend_on` is reported, and one inside it passes.
 - In an `independent` layer, a dependency between two units is reported unless a coupling
   with a reason declares it.
 - With `external`, an external dependency off the allow-list is reported, and an entry

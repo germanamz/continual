@@ -29,3 +29,4 @@ The fallback paragraph in [Harness: installing the mod](../../../docs/harness.md
 ## Done when
 
 - Recorded payloads run through the real binary against fixture configurations.
+- The open question on the fallback in docs/harness.md is decided and removed.

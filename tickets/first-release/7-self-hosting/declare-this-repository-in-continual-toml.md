@@ -13,8 +13,8 @@ status: pending
 ## Goal
 
 Write this repository's root `continual.toml` with every step `cargo xtask ci` runs and a `ci`
-pipeline that runs them as `xtask` hardcodes today, and add the CI dogfood job that runs the working-tree build of `continual` on it with `--unpinned`,
-while `cargo xtask` stays the gate.
+pipeline that runs them as `xtask` hardcodes today, and add the CI dogfood job that runs the
+working-tree build of `continual` on it with `--unpinned`, while `cargo xtask` stays the gate.
 
 ## Design
 

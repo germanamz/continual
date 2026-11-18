@@ -1,7 +1,9 @@
 ---
 type: ticket
 title: Hold the review gate in the Claude Code mod
-blocks: tickets/first-release/7-self-hosting/story
+blocks:
+  - tickets/first-release/7-self-hosting/story
+  - tickets/first-release/6-releases/publish-the-first-release
 order: 4
 parent: tickets/first-release/epic
 priority: medium

@@ -1,7 +1,9 @@
 ---
 type: ticket
 title: Run the built-in checks in Continual
-blocks: tickets/first-release/7-self-hosting/story
+blocks:
+  - tickets/first-release/7-self-hosting/story
+  - tickets/first-release/6-releases/publish-the-first-release
 order: 2
 parent: tickets/first-release/epic
 priority: high

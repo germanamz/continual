@@ -33,7 +33,8 @@ and [Harness: design](../../../docs/harness.md#design).
   permission rules still apply.
 - A command chained with `&&`, `;` or a pipe is split into its segments.
 - A payload with fields this version does not know is still answered.
-- A payload Continual cannot read blocks the command.
+- A payload Continual cannot read, and a failure inside the hook, a panic included, each block
+  the command by ending with exit code 2.
 
 ## Done when
 
