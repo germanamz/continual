@@ -30,7 +30,8 @@ This document describes how the checks work and why they are built this way.
   get explanatory text.
 - **No gate passes vacuously.** Each check has fixture tests that show it failing on a
   violation and passing on clean input. A check also fails when what it checks is missing: the
-  arch check when a configured crate is absent, the coverage check when the report has no data.
+  arch check when a configured crate is absent or the cores directory holds no crate, the
+  coverage check when the report has no data for the workspace or for one of its cores.
 - **One implementation per check.** Claude Code hooks, lefthook and GitHub Actions all call
   the same `cargo xtask` commands. Each check is a pure function over source text or data.
   Launching external tools is thin glue in `xtask/src/runner.rs`, the only code excluded from
@@ -54,10 +55,11 @@ This document describes how the checks work and why they are built this way.
 - `clippy.toml` sets the limits from decision D1 (30 lines, cognitive complexity 15, `self`
   plus 3 parameters, three nested blocks), calibrated to how clippy counts, and lets test code
   use `unwrap`, `expect`, `panic`, printing and indexing.
-- `crates/cores/registry/clippy.toml` repeats those thresholds, because clippy reads only the
-  nearest `clippy.toml` and does not merge them. It adds `max-fn-params-bools = 0` and
-  disallows the standard library's file system, network, process, environment, stdio, thread
-  and clock APIs, each with the port to use instead.
+- Each core carries a `clippy.toml` of its own, as `crates/cores/registry/clippy.toml` is the
+  registry's. It repeats those thresholds, because clippy reads only the nearest `clippy.toml`
+  and does not merge them. It adds `max-fn-params-bools = 0` and disallows the standard
+  library's file system, network, process, environment, stdio, thread and clock APIs, each
+  with the port to use instead. No check requires the file, so a new core's is held by review.
 - `cargo doc` runs with `RUSTDOCFLAGS="-D warnings"`, so a broken intra-doc link fails.
 
 ### `cargo xtask` checks
@@ -70,14 +72,19 @@ This document describes how the checks work and why they are built this way.
   files. With no arguments it checks every Rust file git tracks or would track. Given paths,
   it checks those and skips missing ones.
 - **`arch`** reads `cargo metadata` and `arch.toml`. Every workspace crate must be classified
-  and every configured crate must exist. The core depends on no workspace crate and only on
-  allow-listed external crates, counting normal, dev and build dependencies. A crate may
-  dev-depend on itself to enable test features. Allow-list entries and couplings need a
-  reason. Adapters depend only on the core and declared couplings. Only composition roots
-  depend on adapters, composition roots do not depend on each other, and product crates do not
-  depend on tooling. Every crate sets `[lints] workspace = true`. As a second layer behind the
-  clippy lists, it parses the core's sources with `syn` and rejects any path under `std::fs`,
-  `std::net`, `std::env`, `std::process`, `std::io` or `std::thread`.
+  and every configured crate must exist. `arch.toml` names the directory that holds the cores,
+  and every crate under it is a core; a directory that holds none is a finding. Each core has
+  an allow-list of external crates of its own under `[cores.allowed-dependencies]`, keyed by
+  its package name. A core without a list is a finding, and so is a list that names no core.
+  A core depends on no other workspace crate, another core included, and only on the external
+  crates on its own list, counting normal, dev and build dependencies. A crate may dev-depend
+  on itself to enable test features. Allow-list entries and couplings need a reason. Adapters
+  depend only on cores and declared couplings, so a bridge depends on the two cores it joins.
+  Only composition roots depend on adapters, composition roots do not depend on each other,
+  and product crates do not depend on tooling. Every crate sets `[lints] workspace = true`. As
+  a second layer behind the clippy lists, it parses every core's sources with `syn` and
+  rejects any path under `std::fs`, `std::net`, `std::env`, `std::process`, `std::io` or
+  `std::thread`.
 - **`guard`** compares the working tree, untracked files included, with its merge base against
   `--base` (default `origin/main`). It reports existing tests changed: a `#[test]` function
   deleted, renamed, given `#[ignore]` or `#[should_panic]`, or changed in any token
@@ -90,8 +97,9 @@ This document describes how the checks work and why they are built this way.
   becomes anything but `workspace = true`, and every new `#[expect]` attribute. Adding a test
   is never reported. A source file it cannot parse is reported, not skipped.
 - **`coverage`** runs `cargo llvm-cov nextest`, writes `target/coverage-summary.json` and
-  requires workspace lines and functions at 90% or more and `continual-registry` lines at 95% or
-  more.
+  requires workspace lines and functions at 90% or more and the lines of each core at 95% or
+  more. The cores are the ones the arch check finds, from `arch.toml` and `cargo metadata`, so
+  a core with no data in the report is a violation, and each message names its core's crate.
 - **`mutants`** runs `cargo mutants --in-diff` on the changes since the merge base, untracked
   files included, with the settings in `.cargo/mutants.toml`: nextest as the test tool, a copy
   of `.git` in each scratch tree (the arch check lists files through git), and `runner.rs`
@@ -101,16 +109,6 @@ This document describes how the checks work and why they are built this way.
   pull-request body. Human co-authors and ordinary prose pass.
 - **`ci`** runs the pipeline. Its step list is data in `xtask/src/pipeline.rs`, so the order,
   the arguments and the required-tool table are tested.
-
-> Planned: [Hold Continual's rules in several cores](../tickets/first-release/0-cores/story.md)
-
-`arch` learns several cores ([Workspace](workspace.md#planned-crates)). `arch.toml` names
-the directory that holds them, and every crate under it is a core with an allow-list of
-external crates of its own. A core depends on no workspace crate, another core included. An
-adapter depends only on cores and on declared couplings, so a bridge depends on the two
-cores it joins. The source scan covers every core, each core carries a `clippy.toml` with the
-lists `crates/cores/registry/clippy.toml` holds today, and `coverage` requires 95% of the
-lines of each core.
 
 ### Tests
 
@@ -202,6 +200,16 @@ Continual is built.
 - **Rule texts are gates.** A convention loosened in prose is still a loosened gate, so
   `CONVENTIONS.md`, `AGENTS.md`, `CLAUDE.md` and everything under `.claude/` that steers agents
   are protected like the check configuration.
+- **Each core's allow-list is a line of its own in `arch.toml`**, keyed by the core's package
+  name under `[cores.allowed-dependencies]`, and a core without one is a finding. A new core
+  then always changes `arch.toml`, a guarded file, as every new boundary must (B9). Rejected:
+  a table for each core, a shape for per-core settings that no core has; one flat list whose
+  entries name their core, which never shows a core's empty list; and reading a missing list
+  as an empty one, which lets a boundary arrive without a guarded change.
+- **Coverage takes the cores from `arch.toml` and `cargo metadata`**, as the arch check does,
+  so a core that has no data in the report fails. Rejected: reading the cores from the
+  report's paths, which cannot see a core the report leaves out and writes the cores
+  directory a second time, inside `xtask`.
 - **Coverage minimums are Continual's own**, since the research sets none. `runner.rs` is the only
   exclusion, because every decision it runs is tested elsewhere.
 - **Windows is in the test matrix** because Continual reads repositories on every platform,

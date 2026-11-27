@@ -9,13 +9,15 @@ use std::path::{Path, PathBuf};
 use xtask::arch::sources::check_source;
 use xtask::arch::{
     ArchConfig, DependencyEdge, DependencyKind, PackageNode, WorkspaceGraph, check_graph,
-    check_workspace, load_graph,
+    check_workspace, cores, load_graph,
 };
 
 const CONFIG: &str = r#"
-[core]
-crate = "continual-core"
-allowed-dependencies = [{ name = "itoa", reason = "pure number formatting" }]
+[cores]
+directory = "crates/cores"
+
+[cores.allowed-dependencies]
+continual-core = [{ name = "itoa", reason = "pure number formatting" }]
 
 [composition-roots]
 crates = ["continual", "continual-ui"]
@@ -50,7 +52,7 @@ fn package(name: &str, dir: &str, dependencies: &[(&str, DependencyKind, bool)])
 
 fn base_packages() -> Vec<PackageNode> {
     vec![
-        package("continual-core", "crates/continual-core", &[]),
+        package("continual-core", "crates/cores/core", &[]),
         package(
             "continual",
             "crates/continual",
@@ -72,7 +74,7 @@ fn messages(extra: Vec<PackageNode>) -> Vec<String> {
 
 fn with_core(dependencies: &[(&str, DependencyKind, bool)]) -> Vec<String> {
     let mut packages = base_packages();
-    packages[0] = package("continual-core", "crates/continual-core", dependencies);
+    packages[0] = package("continual-core", "crates/cores/core", dependencies);
     check_graph(&config(), &WorkspaceGraph { packages })
         .into_iter()
         .map(|finding| finding.message)
@@ -330,27 +332,46 @@ fn the_command_fails_with_code_2_without_arch_toml() {
     assert!(String::from_utf8_lossy(&output.stderr).contains("arch.toml"));
 }
 
-/// A one-crate workspace, under git, whose core `lib.rs` holds `source`.
-fn workspace_with_core_source(source: &str) -> tempfile::TempDir {
+fn write_file(root: &Path, path: &str, text: &str) {
+    let path = root.join(path);
+    std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
+    std::fs::write(path, text).expect("write");
+}
+
+/// The `arch.toml` of a workspace whose cores live under `cores/`, each with an empty
+/// allow-list.
+fn arch_toml(cores: &[&str], tooling: &[&str]) -> String {
+    let lists: Vec<String> = cores.iter().map(|core| format!("{core} = []\n")).collect();
+    let tooling: Vec<String> = tooling.iter().map(|name| format!("\"{name}\"")).collect();
+    format!(
+        "[cores]\ndirectory = \"cores\"\n[cores.allowed-dependencies]\n{}[composition-roots]\ncrates = []\n[adapters]\ndirectory = \"crates/adapters\"\n[tooling]\ncrates = [{}]\n",
+        lists.concat(),
+        tooling.join(", ")
+    )
+}
+
+/// A workspace under git with one crate for each `(directory, lib.rs source)`, named
+/// for the last part of its directory, and `arch` as its `arch.toml`.
+fn workspace(crates: &[(&str, &str)], arch: &str) -> tempfile::TempDir {
     let dir = tempfile::tempdir().expect("temp dir");
-    let write = |path: &str, text: &str| {
-        let path = dir.path().join(path);
-        std::fs::create_dir_all(path.parent().expect("parent")).expect("mkdir");
-        std::fs::write(path, text).expect("write");
-    };
-    write(
-        "Cargo.toml",
-        "[workspace]\nresolver = \"3\"\nmembers = [\"core\"]\n\n[workspace.lints.rust]\nunsafe_code = \"forbid\"\n",
+    let members: Vec<String> = crates
+        .iter()
+        .map(|(directory, _)| format!("\"{directory}\""))
+        .collect();
+    let manifest = format!(
+        "[workspace]\nresolver = \"3\"\nmembers = [{}]\n\n[workspace.lints.rust]\nunsafe_code = \"forbid\"\n",
+        members.join(", ")
     );
-    write(
-        "core/Cargo.toml",
-        "[package]\nname = \"core\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n[lints]\nworkspace = true\n",
-    );
-    write("core/src/lib.rs", source);
-    write(
-        "arch.toml",
-        "[core]\ncrate = \"core\"\n[composition-roots]\ncrates = []\n[adapters]\ndirectory = \"crates/adapters\"\n[tooling]\ncrates = []\n",
-    );
+    write_file(dir.path(), "Cargo.toml", &manifest);
+    for (directory, source) in crates {
+        let name = directory.rsplit('/').next().expect("a directory name");
+        let manifest = format!(
+            "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n[lints]\nworkspace = true\n"
+        );
+        write_file(dir.path(), &format!("{directory}/Cargo.toml"), &manifest);
+        write_file(dir.path(), &format!("{directory}/src/lib.rs"), source);
+    }
+    write_file(dir.path(), "arch.toml", arch);
     let status = std::process::Command::new("git")
         .arg("-C")
         .arg(dir.path())
@@ -359,6 +380,24 @@ fn workspace_with_core_source(source: &str) -> tempfile::TempDir {
         .expect("git runs");
     assert!(status.success());
     dir
+}
+
+/// A one-crate workspace, under git, whose core `lib.rs` holds `source`.
+fn workspace_with_core_source(source: &str) -> tempfile::TempDir {
+    workspace(&[("cores/core", source)], &arch_toml(&["core"], &[]))
+}
+
+/// A workspace with two cores and a tooling crate, each `lib.rs` naming a forbidden
+/// `std` module.
+fn workspace_with_two_cores() -> tempfile::TempDir {
+    workspace(
+        &[
+            ("cores/alpha", "use std::fs;\n"),
+            ("cores/beta", "use std::net;\n"),
+            ("tool", "use std::fs;\n"),
+        ],
+        &arch_toml(&["alpha", "beta"], &["tool"]),
+    )
 }
 
 #[test]
@@ -371,8 +410,53 @@ fn the_workspace_check_reports_forbidden_imports_in_core_sources() {
         .collect();
     assert_eq!(
         found,
-        ["core/src/lib.rs:1: core must not use `std::fs`: reach the outside world through a port"]
+        [
+            "cores/core/src/lib.rs:1: core must not use `std::fs`: reach the outside world through a port"
+        ]
     );
+}
+
+#[test]
+fn the_workspace_check_scans_the_sources_of_every_core_and_of_no_other_crate() {
+    let dir = workspace_with_two_cores();
+    let mut found: Vec<String> = check_workspace(dir.path())
+        .expect("check runs")
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    found.sort();
+    assert_eq!(
+        found,
+        [
+            "cores/alpha/src/lib.rs:1: core must not use `std::fs`: reach the outside world through a port",
+            "cores/beta/src/lib.rs:1: core must not use `std::net`: reach the outside world through a port",
+        ]
+    );
+}
+
+#[test]
+fn the_cores_of_a_workspace_are_the_crates_under_its_cores_directory() {
+    let dir = workspace_with_two_cores();
+    let mut found: Vec<(String, PathBuf)> = cores(dir.path())
+        .expect("cores load")
+        .into_iter()
+        .map(|core| (core.name, core.manifest_dir))
+        .collect();
+    found.sort();
+    assert_eq!(
+        found,
+        [
+            ("alpha".to_owned(), PathBuf::from("cores/alpha")),
+            ("beta".to_owned(), PathBuf::from("cores/beta")),
+        ]
+    );
+}
+
+#[test]
+fn the_cores_cannot_be_listed_without_arch_toml() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let error = cores(dir.path()).expect_err("no arch.toml");
+    assert!(error.to_string().contains("arch.toml"), "{error}");
 }
 
 #[test]
@@ -392,7 +476,7 @@ fn a_crate_without_workspace_lints_fails() {
 fn the_workspace_check_reads_each_crates_lints_table() {
     let dir = workspace_with_core_source("pub fn f() {}\n");
     std::fs::write(
-        dir.path().join("core/Cargo.toml"),
+        dir.path().join("cores/core/Cargo.toml"),
         "[package]\nname = \"core\"\nversion = \"0.1.0\"\nedition = \"2024\"\n",
     )
     .expect("write");
@@ -409,6 +493,146 @@ fn the_workspace_check_reads_each_crates_lints_table() {
 fn a_crate_may_dev_depend_on_itself_to_enable_test_features() {
     assert_eq!(
         with_core(&[("continual-core", DependencyKind::Dev, true)]),
+        none()
+    );
+}
+
+/// The allow-list line of the second core in most tests below.
+const ENGINE_LIST: &str = "continual-engine = []";
+
+/// `CONFIG` with `list` as one more line under `[cores.allowed-dependencies]`.
+fn config_with_list(list: &str) -> ArchConfig {
+    let text = CONFIG.replace(
+        "[composition-roots]",
+        &format!("{list}\n\n[composition-roots]"),
+    );
+    ArchConfig::parse(&text).expect("valid config")
+}
+
+fn second_core(dependencies: &[(&str, DependencyKind, bool)]) -> PackageNode {
+    package("continual-engine", "crates/cores/engine", dependencies)
+}
+
+/// The messages for the base packages plus `extra`, with `list` added to `CONFIG`.
+fn messages_with_list(list: &str, extra: Vec<PackageNode>) -> Vec<String> {
+    let mut packages = base_packages();
+    packages.extend(extra);
+    check_graph(&config_with_list(list), &WorkspaceGraph { packages })
+        .into_iter()
+        .map(|finding| finding.message)
+        .collect()
+}
+
+#[test]
+fn every_crate_under_the_cores_directory_is_a_core() {
+    assert_eq!(
+        messages_with_list(ENGINE_LIST, vec![second_core(&[])]),
+        none()
+    );
+}
+
+#[test]
+fn a_cores_directory_without_crates_fails() {
+    let text = CONFIG.replace(
+        r#"continual-core = [{ name = "itoa", reason = "pure number formatting" }]"#,
+        "",
+    );
+    let config = ArchConfig::parse(&text).expect("valid config");
+    let mut packages = base_packages();
+    packages.remove(0);
+    let found = check_graph(&config, &WorkspaceGraph { packages });
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(
+        found[0].message.contains("`crates/cores`") && found[0].message.contains("no crate"),
+        "{found:?}"
+    );
+    assert_eq!(found[0].path, Path::new("arch.toml"));
+}
+
+#[test]
+fn no_core_depends_on_another_core_or_on_any_other_workspace_crate() {
+    for target in ["continual-core", "continual", "xtask"] {
+        let engine = second_core(&[(target, DependencyKind::Normal, true)]);
+        let found = messages_with_list(ENGINE_LIST, vec![engine]);
+        assert_eq!(found.len(), 1, "{target}: {found:?}");
+        assert!(
+            found[0].contains(&format!("core depends on workspace crate `{target}`")),
+            "{found:?}"
+        );
+    }
+}
+
+#[test]
+fn a_core_may_use_only_the_external_crates_on_its_own_allow_list() {
+    let list = r#"continual-engine = [{ name = "memchr", reason = "pure byte search" }]"#;
+    let own = second_core(&[("memchr", DependencyKind::Normal, false)]);
+    assert_eq!(messages_with_list(list, vec![own]), none());
+    let borrowed = second_core(&[("itoa", DependencyKind::Normal, false)]);
+    let found = messages_with_list(list, vec![borrowed]);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(
+        found[0].contains("`itoa`") && found[0].contains("allow-list"),
+        "{found:?}"
+    );
+}
+
+#[test]
+fn a_core_without_an_allow_list_of_its_own_fails() {
+    let mut packages = base_packages();
+    packages.push(second_core(&[]));
+    let found = check_graph(&config(), &WorkspaceGraph { packages });
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(
+        found[0].message.contains("`continual-engine`") && found[0].message.contains("allow-list"),
+        "{found:?}"
+    );
+    assert_eq!(found[0].path, Path::new("crates/cores/engine/Cargo.toml"));
+}
+
+#[test]
+fn an_allow_list_must_name_a_core() {
+    for stray in ["continual-engine", "continual"] {
+        let config = config_with_list(&format!("{stray} = []"));
+        let found = check_graph(
+            &config,
+            &WorkspaceGraph {
+                packages: base_packages(),
+            },
+        );
+        assert_eq!(found.len(), 1, "{stray}: {found:?}");
+        assert!(
+            found[0].message.contains(&format!("`{stray}`"))
+                && found[0].message.contains("not a core"),
+            "{found:?}"
+        );
+        assert_eq!(found[0].path, Path::new("arch.toml"));
+    }
+}
+
+#[test]
+fn every_cores_allow_list_entries_need_a_reason() {
+    let list = r#"continual-engine = [{ name = "memchr", reason = "" }]"#;
+    let engine = second_core(&[("memchr", DependencyKind::Normal, false)]);
+    let found = messages_with_list(list, vec![engine]);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(
+        found[0].contains("`memchr`") && found[0].contains("reason"),
+        "{found:?}"
+    );
+}
+
+#[test]
+fn an_adapter_may_depend_on_two_cores() {
+    let bridge = package(
+        "continual-engine-registry",
+        "crates/adapters/engine-registry",
+        &[
+            ("continual-core", DependencyKind::Normal, true),
+            ("continual-engine", DependencyKind::Normal, true),
+        ],
+    );
+    assert_eq!(
+        messages_with_list(ENGINE_LIST, vec![second_core(&[]), bridge]),
         none()
     );
 }

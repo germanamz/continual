@@ -27,8 +27,9 @@ fixes for PR comments.
 
 ## Map
 
-- `crates/cores/registry/`: the one core so far. Domain types and port traits; no I/O. The
-  planned cores go beside it, under `crates/cores/<name>/` (`docs/workspace.md`).
+- `crates/cores/<name>/`: the cores. Every crate there is a core, with an allow-list of its
+  own in `arch.toml`. `registry` is the one core so far: domain types and port traits; no I/O.
+  The planned cores go beside it (`docs/workspace.md`).
 - `crates/continual/`: the CLI binary. `main.rs` is the composition root, `cli.rs` the driving
   adapter.
 - `crates/adapters/<name>/`: adapter crates, bridges among them (none yet).
@@ -38,7 +39,7 @@ fixes for PR comments.
 ## Invariants
 
 - A core has no technology dependencies and no I/O, clock, environment, process or
-  randomness (B1, B6, X1). Checked by `cargo xtask arch` and the core's `clippy.toml`.
+  randomness (B1, B6, X1). Checked by `cargo xtask arch` and each core's `clippy.toml`.
 - No core depends on another or shares a crate with one. A core that needs another declares a
   driven port, and a bridge adapter implements it by calling the other core (H1–H4).
 - Driven ports are traits declared in the core that needs them and implemented by adapters.
@@ -48,8 +49,8 @@ fixes for PR comments.
   composition roots wire adapters (B4, B5). Checked by `cargo xtask arch`.
 - Checks, findings, pipelines, rules and gates are domain concepts in the cores. Launching
   tools, reading files, git and each language's parser are adapters (P1).
-- A new external dependency of a core goes on `arch.toml`'s allow-list only with a stated
-  reason and the contributor's approval.
+- A new external dependency of a core goes on that core's allow-list in `arch.toml` only with a
+  stated reason and the contributor's approval.
 
 ## Code
 

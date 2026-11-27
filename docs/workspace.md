@@ -36,13 +36,13 @@ adapter arrive with the first feature that needs them. The ports are listed in
 [Continual's cores](../CONVENTIONS.md#3-continuals-cores), and the design document of each
 area says what its ports ask.
 
-`arch.toml` classifies every crate as core, composition root, adapter or tooling, and lists
-the core's allowed external dependencies (none yet) and the couplings allowed between adapters
-(none yet). `cargo xtask arch` enforces it ([Checks](checks.md#cargo-xtask-checks)).
+`arch.toml` classifies every crate as core, composition root, adapter or tooling. It names
+`crates/cores` as the directory that holds the cores, so every crate under it is a core, and
+`crates/adapters` as the one that holds the adapters. It lists each core's allowed external
+dependencies (none yet) and the couplings allowed between adapters (none yet).
+`cargo xtask arch` enforces it ([Checks](checks.md#cargo-xtask-checks)).
 
 ### Planned crates
-
-> Planned: [Hold Continual's rules in several cores](../tickets/first-release/0-cores/story.md)
 
 > Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
 
@@ -103,8 +103,8 @@ each check core, wraps it in its bridge and hands the bridges to the registry. E
 and every language adapter is compiled into the one binary
 ([Distribution](distribution.md#decisions)).
 
-`arch.toml` then names the directory that holds the cores, and gives each core an allow-list
-of its own ([Checks](checks.md#cargo-xtask-checks)).
+Each core arrives with an allow-list of its own in `arch.toml` and a `clippy.toml` like the
+registry's ([Checks](checks.md#cargo-xtask-checks)).
 
 ### Repository layout
 

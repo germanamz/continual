@@ -13,7 +13,7 @@ use std::path::Path;
 use std::process::{Command, ExitCode};
 
 use crate::pipeline::{self, Step};
-use crate::{coverage, git};
+use crate::{arch, coverage, git};
 
 fn run(step: &Step) -> bool {
     Command::new(step.program)
@@ -57,24 +57,38 @@ pub fn ci() -> ExitCode {
     }
 }
 
-/// `cargo xtask coverage`: run the tests under coverage and check the thresholds.
+/// `cargo xtask coverage`: run the tests under coverage and check the thresholds,
+/// the core one for each core that `arch.toml` and `cargo metadata` name.
 #[must_use]
 pub fn coverage() -> ExitCode {
+    let cores: Vec<coverage::Core> = match arch::cores(Path::new(".")) {
+        Ok(cores) => cores
+            .iter()
+            .map(|core| coverage::Core::new(&core.name, &core.manifest_dir))
+            .collect(),
+        Err(error) => {
+            eprintln!("coverage: {error}");
+            return ExitCode::from(2);
+        }
+    };
     if !run(&pipeline::COVERAGE) {
         eprintln!("coverage: the instrumented test run failed");
         return ExitCode::from(1);
     }
-    let report = match std::fs::read_to_string(pipeline::COVERAGE_REPORT) {
-        Ok(report) => report,
+    match std::fs::read_to_string(pipeline::COVERAGE_REPORT) {
+        Ok(report) => judge_coverage(&report, &cores),
         Err(error) => {
             eprintln!(
                 "coverage: cannot read {}: {error}",
                 pipeline::COVERAGE_REPORT
             );
-            return ExitCode::from(2);
+            ExitCode::from(2)
         }
-    };
-    match coverage::evaluate(&report, "crates/cores/registry/", &coverage::THRESHOLDS) {
+    }
+}
+
+fn judge_coverage(report: &str, cores: &[coverage::Core]) -> ExitCode {
+    match coverage::evaluate(report, cores, &coverage::THRESHOLDS) {
         Ok(violations) if violations.is_empty() => {
             println!("coverage: thresholds met");
             ExitCode::SUCCESS

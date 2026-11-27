@@ -1,8 +1,8 @@
-//! Forbidden standard-library modules in the core's sources.
+//! Forbidden standard-library modules in a core's sources.
 //!
-//! The core reaches files, the network, the environment, processes, I/O streams and
+//! A core reaches files, the network, the environment, processes, I/O streams and
 //! threads only through ports, so its sources must not name the `std` modules that
-//! provide them. This complements the clippy `disallowed-*` lists in the core's
+//! provide them. This complements the clippy `disallowed-*` lists in each core's
 //! `clippy.toml`, which catch calls but not imports.
 
 use std::path::Path;
@@ -13,7 +13,7 @@ use syn::visit::Visit;
 
 use crate::finding::Finding;
 
-/// The `std` modules the core must not name.
+/// The `std` modules a core must not name.
 pub const FORBIDDEN_MODULES: [&str; 6] = ["fs", "net", "env", "process", "io", "thread"];
 
 /// Checks one core source file for paths under [`FORBIDDEN_MODULES`].
