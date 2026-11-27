@@ -15,8 +15,9 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
 
 - `continual` accepts only `--help` and `--version` so far. An unknown flag is a usage error,
   and running it with no arguments prints the help as a usage error (exit code 2).
-- The core exposes one value object, `CheckName`, with its error type `CheckNameError`. Its
-  doc comments in `crates/continual-core/src/check_name.rs` state the parsing rules.
+- The registry core exposes one value object, `CheckName`, with its error type
+  `CheckNameError`. Its doc comments in `crates/cores/registry/src/check_name.rs` state the
+  parsing rules.
 - Every crate builds on the toolchain pinned in `rust-toolchain.toml`: Rust 1.99.1 with
   rustfmt, clippy and llvm-tools-preview.
 
@@ -26,7 +27,7 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
 
 | Crate | Path | Role |
 | --- | --- | --- |
-| `continual-core` | `crates/continual-core/` | The one core so far: domain types and, as they arrive, driven-port traits. No I/O and no technology dependencies. |
+| `continual-registry` | `crates/cores/registry/` | The registry core, the one core so far: domain types and, as they arrive, driven-port traits. No I/O and no technology dependencies. |
 | `continual` | `crates/continual/` | The CLI binary. `main.rs` is the composition root and `cli.rs` the driving adapter, built on clap. |
 | `xtask` | `xtask/` | Repository tooling, the checks behind `cargo xtask` ([Checks](checks.md)). Product crates never depend on it. |
 
@@ -51,7 +52,8 @@ the core's allowed external dependencies (none yet) and the couplings allowed be
 
 Continual's rules are split into cores. Each is a crate under `crates/cores/<name>/` that
 holds one unit of logic and depends on no other workspace crate, another core included.
-`crates/continual-core` moves there as the registry core, which keeps `CheckName`.
+The registry core is there already and holds `CheckName`. The rest of it and the other cores
+are planned.
 
 | Core | Path | Holds | Designed in |
 | --- | --- | --- | --- |
@@ -127,7 +129,7 @@ tusk.toml                  the Tusk workspace manifest
 .config/nextest.toml       the nextest CI profile
 .claude/                   Claude Code settings, hooks, path-scoped rules and skills
 .github/                   CI workflows and the pull-request template
-crates/continual-core/     the core
+crates/cores/registry/     the registry core, the one core so far
 crates/continual/          the CLI binary
 xtask/                     the repository checks
 ```
@@ -173,9 +175,8 @@ configuration.
   root. Rejected: one crate that holds every check's bridge, which could reach every check
   core at once.
 - **`CheckName` as the first value object.** The checks needed real logic to exercise:
-  tests, coverage and mutation testing. `CheckName` models the name of one check, so it
-  moves with its crate into the registry core. Rejected: proving the checks with fixtures
-  only.
+  tests, coverage and mutation testing. `CheckName` models the name of one check, so its
+  crate is the registry core. Rejected: proving the checks with fixtures only.
 - **One binary.** Continual runs from a terminal, a git hook, a CI job or an agent harness, and
   each of those can call the `continual` binary, so there is one composition root. A second
   deployable gets its own when it exists.

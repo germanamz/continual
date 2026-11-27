@@ -3,7 +3,7 @@
 # The core holds the domain and its ports. It may depend only on the external crates
 # listed here, each with a reason: { name = "…", reason = "…" }.
 [core]
-crate = "continual-core"
+crate = "continual-registry"
 allowed-dependencies = []
 
 # One composition root per deployable: the only crates that wire adapters.

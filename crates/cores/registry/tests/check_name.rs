@@ -1,7 +1,9 @@
 //! Behaviour of [`CheckName`], the name that identifies a check in a pipeline.
 
-use continual_core::CheckNameError::{Empty, ForbiddenCharacter, InvalidStart, MisplacedHyphen};
-use continual_core::{CheckName, CheckNameError};
+use continual_registry::CheckNameError::{
+    Empty, ForbiddenCharacter, InvalidStart, MisplacedHyphen,
+};
+use continual_registry::{CheckName, CheckNameError};
 
 fn text_of(input: &str) -> String {
     match CheckName::parse(input) {

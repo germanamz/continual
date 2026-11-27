@@ -5,7 +5,7 @@ blocks: tickets/first-release/0-cores/check-several-cores-in-the-arch-check
 parent: tickets/first-release/0-cores/story
 points: 2
 priority: high
-status: pending
+status: completed
 ---
 
 # Move the core crate under crates/cores

@@ -26,7 +26,7 @@ anyone who cannot open the doc.
 
 | Term | Meaning in Continual |
 | --- | --- |
-| Core | A crate that holds one unit of Continual's rules and no technology: no I/O, clock, environment or randomness. No core depends on another (H1). Today there is one, `crates/continual-core`; the planned cores are in section 3. |
+| Core | A crate that holds one unit of Continual's rules and no technology: no I/O, clock, environment or randomness. No core depends on another (H1). Today there is one, `crates/cores/registry`; the planned cores are in section 3. |
 | Port | A conversation between a core and one actor outside it, named for its purpose in that core's domain language. |
 | Driven port | What a core needs from outside, such as running a tool, reading the repository's files or asking another core. A trait declared in the core that needs it and implemented by an adapter. |
 | Driving port | What the outside asks a core to do. A concrete core type or function that driving adapters call directly. |
@@ -76,8 +76,9 @@ reading files and configuration, asking git and parsing each language's source.
 The rules are split into cores, each one unit of logic small enough to read and test whole
 (H1). No core depends on another. A core that needs another states the need as a driven port
 in its own words, and a bridge implements that port by calling the other core (H2 to H4).
-Today the one core is `crates/continual-core`. The cores below are planned, and
-[Workspace](docs/workspace.md#planned-crates) lists their crates.
+Today the one core is `crates/cores/registry`, which holds the check name. The rest of it and
+the other cores below are planned, and [Workspace](docs/workspace.md#planned-crates) lists
+their crates.
 
 | Core | Holds |
 | --- | --- |
@@ -115,8 +116,8 @@ Each port's operations are described in the design document of its area:
 
 Crates by role:
 
-- `crates/cores/<name>`: the cores (planned). Until the first of them arrives,
-  `crates/continual-core` is the one core. Modules are organised by feature inside a core.
+- `crates/cores/<name>`: the cores. `crates/cores/registry` is the one core so far, and the
+  others are planned. Modules are organised by feature inside a core.
 - `crates/continual`: the composition root, one per deployable.
 - `crates/adapters/<name>`: adapters, bridges among them (none yet).
 - `xtask`: repository tooling. Product crates never depend on it.
@@ -255,15 +256,15 @@ Crates by role:
 | T6 | Each driven port has one contract suite, a generic test function run against the fake on every run and against each real adapter in CI. Suites and fakes live in the `testing` module of the core that declares the port, behind that crate's `testing` feature, which the core's tests (through a dev-dependency on the crate itself) and adapter tests enable. Change the suite before changing the port. A fake has no behaviour the suite does not pin. | A | review; CI |
 | T7 | Driving-adapter tests go through the real binary or framework and assert translation only. | A | review |
 | T8 | One or two smoke tests boot each real composition root. | J | `crates/*/tests/cli.rs` |
-| T9 | Test through the driving port; a core's tests live in its own `tests/` directory, `crates/continual-core/tests/` today. Unit tests inside modules are for dense pure logic only. No test file per type by default. | J | review |
+| T9 | Test through the driving port; a core's tests live in its own `tests/` directory, `crates/cores/registry/tests/` today. Unit tests inside modules are for dense pure logic only. No test file per type by default. | J | review |
 | T10 | Test names describe behaviour in domain language (`empty_segments_are_rejected`). | A | review |
 | T11 | One concept per test, arranged, acted and asserted; readability over reuse. | J | review |
 | T12 | A new test that passes on its first run is suspect: show it can fail by breaking the code once. | A | `cargo xtask mutants`; PR evidence |
 | T13 | Refactor only on green, separately from behaviour changes. | A | review |
 
 Coverage minimums (`cargo xtask coverage`): workspace lines 90%, workspace functions 90%,
-`continual-core` lines 95%. Only `xtask/src/runner.rs`, which launches external tools and makes
-no decisions, is excluded. Mutation testing (`cargo xtask mutants`) must report no missed
+`continual-registry` lines 95%. Only `xtask/src/runner.rs`, which launches external tools and
+makes no decisions, is excluded. Mutation testing (`cargo xtask mutants`) must report no missed
 mutants in the diff.
 
 ### Cross-cutting concerns (X)
@@ -389,7 +390,7 @@ boundary.
 | --- | --- | --- |
 | Formatting | `cargo fmt --all --check` | Q21 |
 | Workspace lints and limits | `cargo clippy --workspace --all-targets -- -D warnings` | Q5, Q8, Q14, C4, E2–E4, G9 |
-| Core restrictions | `crates/continual-core/clippy.toml` (same clippy run) | B6, X1, X4, Q8 |
+| Core restrictions | `crates/cores/registry/clippy.toml` (same clippy run) | B6, X1, X4, Q8 |
 | Docs | `cargo doc --workspace --no-deps` with `RUSTDOCFLAGS="-D warnings"` | C4 |
 | Comments | `cargo xtask comments` | C1–C3, Q20 |
 | Architecture | `cargo xtask arch` (also: every crate sets `[lints] workspace = true`) | B1–B7, B9, H1, H4, P7, X3, M4, Q21 |

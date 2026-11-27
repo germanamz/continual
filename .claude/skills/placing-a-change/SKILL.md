@@ -15,7 +15,7 @@ or a calculation beyond copying fields? If not, use the simplest structure that 
 out of whatever rules exist (W1), and say so in the PR.
 
 **1. A business rule, invariant, calculation or flow changes.** Edit only the core that owns
-the rule: `crates/continual-core` today, one of the cores under `crates/cores/` once they
+the rule: `crates/cores/registry` today, one of the cores under `crates/cores/` once the others
 exist. Invariants go in the value object's constructor; orchestration goes in a use-case
 function or type. Test through that core's public API in its `tests/` directory with fakes. A
 rule no core owns goes in the core whose model it shares, or in a new core when it has rules
@@ -58,8 +58,8 @@ choice. If the choice would add a port or a core, or cross a boundary, stop and 
 
 ## Workflow: add a driven port and its adapter
 
-The paths below are those of `continual-core`, the one core today; another core's port follows
-the same steps in its own crate.
+The paths below are those of `continual-registry`, the one core today; another core's port
+follows the same steps in its own crate.
 
 1. Write the trait in the core that needs it, documenting inputs, outputs, `# Errors`, side
    effects and invariants. Its types and its error enum are that core's own (B7, E2).
@@ -76,14 +76,14 @@ the same steps in its own crate.
    ```
 
    The core's own tests enable the feature through a dev-dependency on the crate itself,
-   `continual-core = { path = ".", features = ["testing"] }`; `cargo xtask arch` allows a crate's
-   dependency on itself.
+   `continual-registry = { path = ".", features = ["testing"] }`; `cargo xtask arch` allows a
+   crate's dependency on itself.
 3. Write the in-memory fake in the same `testing` module until the suite passes, called from a
-   test in `crates/continual-core/tests/`. The fake has no behaviour the suite does not pin down.
+   test in `crates/cores/registry/tests/`. The fake has no behaviour the suite does not pin down.
 4. Create the adapter crate under `crates/adapters/<name>/`, implementing the trait, with
    `[lints] workspace = true`. It maps vendor types to core types and translates errors, keeping
    the source (A4, E6). Its tests enable the suite with
-   `continual-core = { path = "../../continual-core", features = ["testing"] }` in
+   `continual-registry = { path = "../../cores/registry", features = ["testing"] }` in
    `[dev-dependencies]` and run it against the real adapter.
    A bridge is the same crate with a second dependency: the core it calls. It is named for the
    two cores, the one that asks first (`engine-registry`), and it only maps types and errors

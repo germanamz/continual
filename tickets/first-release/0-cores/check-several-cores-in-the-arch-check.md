@@ -39,3 +39,6 @@ H4 in [CONVENTIONS.md](../../../CONVENTIONS.md#cores-h).
 - `arch.toml` names `crates/cores` and holds the registry core's empty allow-list.
 - docs/checks.md describes the check as built, and its planned marker is gone.
 - `CONVENTIONS.md` and `AGENTS.md` describe the cores directory as built.
+- The coverage check's message no longer says `continual-core`, the registry core's old name.
+  `core_line_coverage_can_fail` pins that text, so rewording it is a guarded test edit to
+  report.
