@@ -26,7 +26,7 @@ anyone who cannot open the doc.
 
 | Term | Meaning in Continual |
 | --- | --- |
-| Core | A crate that holds one unit of Continual's rules and no technology: no I/O, clock, environment or randomness. No core depends on another (H1). Today there is one, `crates/cores/registry`; the planned cores are in section 3. |
+| Core | A crate that holds one unit of Continual's rules and no technology: no I/O, clock, environment or randomness. No core depends on another (H1). Today there are two, `crates/cores/engine` and `crates/cores/registry`; the planned cores are in section 3. |
 | Port | A conversation between a core and one actor outside it, named for its purpose in that core's domain language. |
 | Driven port | What a core needs from outside, such as running a tool, reading the repository's files or asking another core. A trait declared in the core that needs it and implemented by an adapter. |
 | Driving port | What the outside asks a core to do. A concrete core type or function that driving adapters call directly. |
@@ -76,9 +76,10 @@ reading files and configuration, asking git and parsing each language's source.
 The rules are split into cores, each one unit of logic small enough to read and test whole
 (H1). No core depends on another. A core that needs another states the need as a driven port
 in its own words, and a bridge implements that port by calling the other core (H2 to H4).
-Today the one core is `crates/cores/registry`, which holds the check name. The rest of it and
-the other cores below are planned, and [Workspace](docs/workspace.md#planned-crates) lists
-their crates.
+Today there are two: `crates/cores/registry`, which holds the check name, and
+`crates/cores/engine`, which holds a workspace's step definitions. The rest of both and the
+other cores below are planned, and [Workspace](docs/workspace.md#planned-crates) lists their
+crates.
 
 | Core | Holds |
 | --- | --- |
@@ -117,8 +118,8 @@ Each port's operations are described in the design document of its area:
 Crates by role:
 
 - `crates/cores/<name>`: the cores. Every crate there is a core, with an allow-list of its
-  own in `arch.toml`. `crates/cores/registry` is the one core so far, and the others are
-  planned. Modules are organised by feature inside a core.
+  own in `arch.toml`. `crates/cores/engine` and `crates/cores/registry` are the cores so far,
+  and the others are planned. Modules are organised by feature inside a core.
 - `crates/continual`: the composition root, one per deployable.
 - `crates/adapters/<name>`: adapters, bridges among them (none yet).
 - `xtask`: repository tooling. Product crates never depend on it.

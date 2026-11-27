@@ -28,8 +28,8 @@ fixes for PR comments.
 ## Map
 
 - `crates/cores/<name>/`: the cores. Every crate there is a core, with an allow-list of its
-  own in `arch.toml`. `registry` is the one core so far: domain types and port traits; no I/O.
-  The planned cores go beside it (`docs/workspace.md`).
+  own in `arch.toml`. `engine` and `registry` are the cores so far: domain types and port
+  traits; no I/O. The planned cores go beside them (`docs/workspace.md`).
 - `crates/continual/`: the CLI binary. `main.rs` is the composition root, `cli.rs` the driving
   adapter.
 - `crates/adapters/<name>/`: adapter crates, bridges among them (none yet).

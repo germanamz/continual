@@ -441,6 +441,15 @@ cores ([Workspace](workspace.md#planned-crates)), in feature modules:
   ([Harness](harness.md#design)). Step, pipeline and package names are value objects of the
   engine's own, which follow the rules a check name follows
   ([Workspace](workspace.md#decisions)).
+
+  A `Workspace` is built from configuration input: plain records that hold each item as
+  written, with its location, a file and a line. The steps arrive by name, so no name can
+  be given twice, a tool step's `run` as a program and its arguments, and a check step's
+  entries in list order, where a step that lists none has no `checks`. Building reports
+  every problem at once instead of stopping at the first (E9): `jobs` and the
+  configuration's `timeout` first, then the steps in the order of their names. Each problem
+  holds what is wrong and the location of the item that is wrong, and prints as
+  `continual.toml:31: message`.
 - **`pipeline`**: a `Run` plans the pipelines asked for and the pipelines they depend on, then
   works as a state machine: it says which entries are ready, in the fixed order the
   [pipelines](#pipelines) section gives, records each outcome, skips the
@@ -635,3 +644,14 @@ on that runtime, and maps the verdict to the exit code (A2).
   on its own. `batch = true` is the step saying that its tool judges each file alone.
   Rejected: batching every step, as `xargs` does, which silently changes what such a tool
   checks; and never batching, which leaves a formatter unable to run on a very large commit.
+
+## Open questions
+
+- What a `run` that holds no word is, such as `run = ""`. The engine's configuration input
+  holds a tool step's command as a program and its arguments, so a `run` without a program
+  cannot reach the engine as a command, and the configuration adapter meets it first, when
+  it splits `run` ([Read continual.toml](../tickets/first-release/1-pipeline/read-continual-toml.md)).
+- Which task gives the engine a step's `install`. The step definitions hold `run`, `checks`
+  and `timeout`, and no ticket of the
+  [pipeline story](../tickets/first-release/1-pipeline/story.md) lists `install` among the
+  behaviours it adds to the engine.
