@@ -23,6 +23,11 @@ location.
 The `ConfigSource` row in [Pipeline: ports and adapters](../../../docs/pipeline.md#ports-and-adapters)
 and the validation rules in [Pipeline: `continual.toml`](../../../docs/pipeline.md#continualtoml).
 
+## Carried over
+
+- `Workspace::build` returns its problems as a list, `Vec<Problem>`, which is not an error
+  type of its own. The error enum of the use case that loads a workspace wraps it (E2).
+
 ## Behaviours to test
 
 - Configuration input from the source becomes a `Workspace`, with defaults applied.

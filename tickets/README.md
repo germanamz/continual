@@ -2,7 +2,7 @@
 
 Each file here is one unit of planned work: a Tusk `ticket` node. The design the work builds
 lives in the [design documents](../docs/README.md), and a ticket links to it instead of
-repeating it. The rules are K4 to K7 and K9 in
+repeating it. The rules are K4 to K7, K9 and K10 in
 [CONVENTIONS.md](../CONVENTIONS.md#design-documents-and-tickets-k).
 
 ## A ticket
@@ -77,6 +77,11 @@ Links to the design-document sections that hold the design, for example
 [Built-in checks: comments](../../../docs/built-in-checks.md#comments), relative to the
 ticket's own folder.
 
+## Carried over
+
+- What an earlier task left for this one: a nuance to keep in mind, or a link to the open
+  question this task settles.
+
 ## Behaviours to test
 
 - Each behaviour the change adds, named in domain language.
@@ -90,6 +95,13 @@ ticket's own folder.
 
 `status` is required, and so is `points` on a task. `priority` (`low`, `medium` or `high`),
 `parent`, `blocks` and `order` are optional.
+
+"Carried over" is there only when an earlier task left the ticket something (K10). A task
+that meets a nuance the design does not spell out, or something it leaves ambiguous, adds a
+line to the open ticket that will meet it next, in its own pull request. A point the design
+leaves undecided is written under "Open questions" in the area's design document, and the
+line links to it. A point no open ticket will meet stays an open question, or becomes a ticket
+when it is work.
 
 ## Status
 

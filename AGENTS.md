@@ -89,6 +89,10 @@ fixes for PR comments.
   story split into tasks (K9).
 - Each task is built in a session of its own. What the next session needs goes to its home,
   or to `MEMORY.md` when it has none: short, rewritten whole, never a session log (K8).
+- Track what comes up while building. A nuance or an ambiguity goes into the open ticket that
+  will meet it, under "Carried over", and one the design leaves undecided also goes under
+  "Open questions" in the area's design document. Tell the contributor of each when the change
+  is ready (K10).
 
 ## Stop and report when
 
