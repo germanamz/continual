@@ -4,7 +4,7 @@ title: Check several cores in the arch check
 parent: tickets/first-release/0-cores/story
 points: 3
 priority: high
-status: pending
+status: completed
 ---
 
 # Check several cores in the arch check

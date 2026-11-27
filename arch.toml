@@ -1,16 +1,20 @@
-# Architecture rules checked by `cargo xtask arch`. See CONVENTIONS.md (B1–B5, B9).
+# Architecture rules checked by `cargo xtask arch`. See CONVENTIONS.md (B1–B5, B9, H1, H4).
 
-# The core holds the domain and its ports. It may depend only on the external crates
-# listed here, each with a reason: { name = "…", reason = "…" }.
-[core]
-crate = "continual-registry"
-allowed-dependencies = []
+# Every crate under this directory is a core: it holds one unit of the domain and its
+# ports, and depends on no other workspace crate, another core included.
+[cores]
+directory = "crates/cores"
+
+# Each core may depend only on the external crates on its own list, each with a reason:
+# <core> = [{ name = "…", reason = "…" }]. Every core has a list, even an empty one.
+[cores.allowed-dependencies]
+continual-registry = []
 
 # One composition root per deployable: the only crates that wire adapters.
 [composition-roots]
 crates = ["continual"]
 
-# Every crate under this directory is an adapter. Adapters depend on the core only,
+# Every crate under this directory is an adapter. Adapters depend on cores only,
 # except for declared couplings: { from = "…", to = "…", reason = "…" }.
 [adapters]
 directory = "crates/adapters"

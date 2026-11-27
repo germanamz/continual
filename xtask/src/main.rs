@@ -28,7 +28,7 @@ enum Command {
         /// Files to check; every Rust file in the repository when empty.
         paths: Vec<PathBuf>,
     },
-    /// Check crate dependencies and the core's imports against `arch.toml`.
+    /// Check crate dependencies and every core's imports against `arch.toml`.
     Arch,
     /// Report changes to existing tests and to gates since the merge base.
     Guard {

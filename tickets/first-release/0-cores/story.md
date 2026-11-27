@@ -8,7 +8,7 @@ blocks:
 order: 0
 parent: tickets/first-release/epic
 priority: high
-status: pending
+status: completed
 ---
 
 # Hold Continual's rules in several cores

@@ -116,8 +116,9 @@ Each port's operations are described in the design document of its area:
 
 Crates by role:
 
-- `crates/cores/<name>`: the cores. `crates/cores/registry` is the one core so far, and the
-  others are planned. Modules are organised by feature inside a core.
+- `crates/cores/<name>`: the cores. Every crate there is a core, with an allow-list of its
+  own in `arch.toml`. `crates/cores/registry` is the one core so far, and the others are
+  planned. Modules are organised by feature inside a core.
 - `crates/continual`: the composition root, one per deployable.
 - `crates/adapters/<name>`: adapters, bridges among them (none yet).
 - `xtask`: repository tooling. Product crates never depend on it.
@@ -128,7 +129,7 @@ Crates by role:
 
 | ID | Rule | Type | Check |
 | --- | --- | --- | --- |
-| B1 | A core does not depend on another core, on adapter crates, composition roots, or any process launcher, git library, language parser or lexer, file-system library, async runtime, framework or vendor SDK. | A | `cargo xtask arch` (empty allow-list) |
+| B1 | A core does not depend on another core, on adapter crates, composition roots, or any process launcher, git library, language parser or lexer, file-system library, async runtime, framework or vendor SDK. | A | `cargo xtask arch` (each core's allow-list, empty) |
 | B2 | Driven ports are traits in the core that needs them, implemented by adapters. A core never names a concrete adapter type. | A | `cargo xtask arch` |
 | B3 | Driving adapters may call core types and functions directly. A core never depends on them. | A | `cargo xtask arch` |
 | B4 | Adapters do not depend on each other, except couplings declared in `arch.toml` with a reason. | A | `cargo xtask arch` |
@@ -136,7 +137,7 @@ Crates by role:
 | B6 | Everything between a core and the outside passes through a port: files, environment, network, processes, threads, clock, randomness and other cores. | A | core `clippy.toml` disallowed lists; `cargo xtask arch` source scan |
 | B7 | Port signatures use the declaring core's types only. No process, git-library, parser or framework types, and no other core's types. | A | follows from B1 |
 | B8 | A core does not reach through a port's return value into technology objects. | A | follows from B7; review |
-| B9 | Every new boundary gets an `arch.toml` entry. The arch check fails when a configured crate is missing, so it cannot pass vacuously. | A | `cargo xtask arch` |
+| B9 | Every new boundary gets an `arch.toml` entry; a new core's is its allow-list. The arch check fails when a configured crate is missing, when a core has no allow-list or when the cores directory holds no crate, so it cannot pass vacuously. | A | `cargo xtask arch` |
 | B10 | Existing violations, if there ever are any, are frozen in `arch.toml` with a reason, never hidden by disabling a rule. No new ones. | A | review; `cargo xtask guard` |
 
 ### Cores (H)
@@ -263,8 +264,8 @@ Crates by role:
 | T13 | Refactor only on green, separately from behaviour changes. | A | review |
 
 Coverage minimums (`cargo xtask coverage`): workspace lines 90%, workspace functions 90%,
-`continual-registry` lines 95%. Only `xtask/src/runner.rs`, which launches external tools and
-makes no decisions, is excluded. Mutation testing (`cargo xtask mutants`) must report no missed
+each core's lines 95%. Only `xtask/src/runner.rs`, which launches external tools and makes no
+decisions, is excluded. Mutation testing (`cargo xtask mutants`) must report no missed
 mutants in the diff.
 
 ### Cross-cutting concerns (X)
@@ -390,7 +391,7 @@ boundary.
 | --- | --- | --- |
 | Formatting | `cargo fmt --all --check` | Q21 |
 | Workspace lints and limits | `cargo clippy --workspace --all-targets -- -D warnings` | Q5, Q8, Q14, C4, E2–E4, G9 |
-| Core restrictions | `crates/cores/registry/clippy.toml` (same clippy run) | B6, X1, X4, Q8 |
+| Core restrictions | each core's `clippy.toml`, such as `crates/cores/registry/clippy.toml` (same clippy run) | B6, X1, X4, Q8 |
 | Docs | `cargo doc --workspace --no-deps` with `RUSTDOCFLAGS="-D warnings"` | C4 |
 | Comments | `cargo xtask comments` | C1–C3, Q20 |
 | Architecture | `cargo xtask arch` (also: every crate sets `[lints] workspace = true`) | B1–B7, B9, H1, H4, P7, X3, M4, Q21 |

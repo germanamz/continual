@@ -4,9 +4,22 @@
     reason = "test helpers fail the test when setup fails"
 )]
 
-use xtask::coverage::{THRESHOLDS, Thresholds, evaluate};
+use std::path::Path;
+
+use xtask::coverage::{Core, THRESHOLDS, Thresholds, evaluate};
 
 const CORE: &str = "crates/continual-core/";
+
+fn cores() -> Vec<Core> {
+    vec![Core::new("continual-core", Path::new(CORE))]
+}
+
+fn two_cores() -> Vec<Core> {
+    vec![
+        Core::new("continual-engine", Path::new("crates/cores/engine")),
+        Core::new("continual-registry", Path::new("crates/cores/registry")),
+    ]
+}
 
 /// One file: (path, lines, covered lines, functions, covered functions).
 type FileFigures = (&'static str, u64, u64, u64, u64);
@@ -40,7 +53,7 @@ fn report(files: &[FileFigures]) -> String {
 }
 
 fn violations(files: &[FileFigures]) -> Vec<String> {
-    evaluate(&report(files), CORE, &THRESHOLDS).expect("valid report")
+    evaluate(&report(files), &cores(), &THRESHOLDS).expect("valid report")
 }
 
 #[test]
@@ -122,14 +135,14 @@ fn missing_core_data_is_a_violation() {
 
 #[test]
 fn a_malformed_report_is_an_error() {
-    assert!(evaluate("{}", CORE, &THRESHOLDS).is_err());
+    assert!(evaluate("{}", &cores(), &THRESHOLDS).is_err());
 }
 
 #[test]
 fn a_report_without_data_is_a_violation() {
     let found = evaluate(
         r#"{"data":[],"type":"llvm.coverage.json.export"}"#,
-        CORE,
+        &cores(),
         &THRESHOLDS,
     )
     .expect("valid report");
@@ -147,4 +160,63 @@ fn zero_workspace_counts_are_violations() {
             "no coverage data for crates/continual-core/",
         ]
     );
+}
+
+fn violations_of(cores: &[Core], files: &[FileFigures]) -> Vec<String> {
+    evaluate(&report(files), cores, &THRESHOLDS).expect("valid report")
+}
+
+#[test]
+fn each_core_is_held_to_the_core_threshold() {
+    let engine_low = [
+        ("crates/cores/engine/src/lib.rs", 1000, 949, 5, 5),
+        ("crates/cores/registry/src/lib.rs", 1000, 1000, 5, 5),
+        ("xtask/src/a.rs", 1000, 1000, 5, 5),
+    ];
+    assert_eq!(
+        violations_of(&two_cores(), &engine_low),
+        ["continual-engine line coverage 94.9% is below 95%"]
+    );
+    let registry_low = [
+        ("crates/cores/engine/src/lib.rs", 1000, 1000, 5, 5),
+        ("crates/cores/registry/src/lib.rs", 1000, 949, 5, 5),
+        ("xtask/src/a.rs", 1000, 1000, 5, 5),
+    ];
+    assert_eq!(
+        violations_of(&two_cores(), &registry_low),
+        ["continual-registry line coverage 94.9% is below 95%"]
+    );
+}
+
+#[test]
+fn a_core_missing_from_the_report_is_a_violation() {
+    let files = [
+        ("crates/cores/registry/src/lib.rs", 100, 100, 5, 5),
+        ("xtask/src/a.rs", 100, 100, 5, 5),
+    ];
+    assert_eq!(
+        violations_of(&two_cores(), &files),
+        ["no coverage data for crates/cores/engine/"]
+    );
+}
+
+#[test]
+fn a_cores_figure_leaves_out_a_directory_that_only_starts_with_its_name() {
+    let guard = [Core::new(
+        "continual-guard",
+        Path::new("crates/cores/guard"),
+    )];
+    let files = [
+        ("crates/cores/guard/src/lib.rs", 20, 20, 5, 5),
+        ("crates/cores/guard-rails/src/lib.rs", 20, 17, 5, 5),
+        ("xtask/src/a.rs", 200, 200, 5, 5),
+    ];
+    assert_eq!(violations_of(&guard, &files), Vec::<String>::new());
+}
+
+#[test]
+fn a_workspace_without_cores_is_a_violation() {
+    let found = violations_of(&[], &[("xtask/src/a.rs", 100, 100, 5, 5)]);
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].contains("no core"), "{found:?}");
 }
