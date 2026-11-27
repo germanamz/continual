@@ -23,7 +23,8 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
   its location ([Pipeline](pipeline.md#the-engine-core)).
 - The library crate `continual-vocabulary` exposes two plain records: `Location`, a file and
   a line, which prints as `file:line`, and `Located<T>`, a value with the place it is
-  written ([Library crates](#library-crates)).
+  written. It also exposes one value object, `Name`, the name rule, with its error type
+  `NameError` ([Library crates](#library-crates)).
 - Every crate builds on the toolchain pinned in `rust-toolchain.toml`: Rust 1.99.1 with
   rustfmt, clippy and llvm-tools-preview.
 
@@ -35,7 +36,7 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
 | --- | --- | --- |
 | `continual-engine` | `crates/cores/engine/` | The engine core: so far the step definitions of its `workspace` module, with the configuration input they are built from and the problems they are rejected with. No I/O and no technology dependencies. |
 | `continual-registry` | `crates/cores/registry/` | The registry core: domain types and, as they arrive, driven-port traits. No I/O and no technology dependencies. |
-| `continual-vocabulary` | `crates/libraries/vocabulary/` | The library crate: the data several cores mean the same way, so far `Location` and `Located<T>`. No I/O and no technology dependencies. |
+| `continual-vocabulary` | `crates/libraries/vocabulary/` | The library crate: the data several cores mean the same way, so far `Location`, `Located<T>` and `Name`. No I/O and no technology dependencies. |
 | `continual` | `crates/continual/` | The CLI binary. `main.rs` is the composition root and `cli.rs` the driving adapter, built on clap. |
 | `xtask` | `xtask/` | Repository tooling, the checks behind `cargo xtask` ([Checks](checks.md)). Product crates never depend on it. |
 
@@ -134,13 +135,23 @@ with the place it is written. Both are plain records, and a `Location` prints as
 The engine builds its configuration input and its problems on them, and re-exports both from
 its `workspace` module ([open questions](#open-questions)).
 
+It also holds the name rule, `Name`: the lowercase, hyphenated text that names a step, a
+check, a pipeline or a package. A name starts with a lowercase ASCII letter and holds only
+lowercase ASCII letters, digits and hyphens, each hyphen between two letters or digits.
+`Name` is a value object, built with `Name::parse`, and `NameError` is the one error enum
+that says why a text is not a name, at its first offending character. Its messages name no
+kind of name, so whoever reports one says which kind the text was meant to be: for a step
+written as `Fmt`, `NameError` says `name starts with 'F', not a lowercase letter`, and the
+engine's problem reads `invalid step name "Fmt": name starts with 'F', not a lowercase
+letter`. The engine builds `StepName` on `Name` and re-exports neither `Name` nor
+`NameError`, so each has one path ([open questions](#open-questions)).
+
 > Planned: [Share data between cores in library crates](../tickets/first-release/1-library-crates/story.md)
 
 The rest of what the cores share arrives in the same crate:
 
 | It will hold | What it is | Arrives with |
 | --- | --- | --- |
-| `Name` | The name rule: the lowercase, hyphenated text that names a step, a check, a pipeline or a package, with the one error enum that says why a text is not a name. A value object. | [Build step names on a shared name rule](../tickets/first-release/1-library-crates/build-step-names-on-a-shared-name-rule.md), then [Build check names on the shared name rule](../tickets/first-release/1-library-crates/build-check-names-on-the-shared-name-rule.md) |
 | `Finding` | One violation, as a location and a message, which prints as `path:line: message`. A plain record. | The first task that reports one: [Run checks through a registry](../tickets/first-release/3-built-in-checks/run-checks-through-a-registry.md) or [Check comments in Continual](../tickets/first-release/3-built-in-checks/check-comments-in-continual.md) |
 | Located values | A check entry's settings and the gate's sections of the configuration, as values that each carry their location, which nothing reads before the check or the gate they belong to. Plain records. | The first task that carries them: [Run check steps](../tickets/first-release/3-built-in-checks/run-check-steps.md), [Run checks through a registry](../tickets/first-release/3-built-in-checks/run-checks-through-a-registry.md) or [Join the gate to the engine](../tickets/first-release/5-claude-code-mod/join-the-gate-to-the-engine.md) |
 
@@ -161,9 +172,15 @@ The rest of what the cores share arrives in the same crate:
   field on a record or a new variant of an enum is not backwards compatible. Such a change
   arrives as a new item beside the old one, the crates that need it move to it, and the old
   item goes in a planned cleanup, a ticket of its own, once nothing uses it.
-- **Each kind of name stays a type of its own.** `StepName` in the engine and `CheckName` in
-  the registry are each built on `Name`, so the rule and its error have one definition and a
-  step name still cannot stand in for a check name.
+- **Each kind of name stays a type of its own.** The engine's `StepName` is built on `Name`,
+  so the rule and its error have one definition and a step name still cannot stand in for
+  another kind of name.
+
+> Planned: [Build check names on the shared name rule](../tickets/first-release/1-library-crates/build-check-names-on-the-shared-name-rule.md)
+
+- The registry's `CheckName` is built on `Name` as well, in place of the copy of the rule
+  and the `CheckNameError` it holds until then.
+
 - **Bridges hand library types on.** A library type crosses a bridge unchanged, as a `String`
   does. A bridge still translates what is each core's own: the inputs and answers of the
   port it implements, error enums, outcomes, a name parsed from text, and settings read from
@@ -328,9 +345,12 @@ configuration.
   were declared before they moved, so the engine re-exports them and each has two paths:
   `continual_engine::workspace::Location` and `continual_vocabulary::Location`. One type
   under two paths is the cost for which the decision on a library crate's limits rejects
-  cores that re-export. Nothing says yet which path an adapter or a new test writes, whether
-  the re-export goes once the engine's tests name the library crate, which is a guarded
-  change, or whether a core re-exports `Name`'s error and `Finding` when they arrive. The
-  tasks that meet it next:
-  [Build step names on a shared name rule](../tickets/first-release/1-library-crates/build-step-names-on-a-shared-name-rule.md)
+  cores that re-export. `Name` and `NameError` have one path each: the engine's
+  `StepName::parse` and `ProblemKind::InvalidStepName` speak `NameError`, the engine does
+  not re-export it, and its tests name `continual_vocabulary::NameError`. Nothing says yet
+  whether that is the rule for every library type: which path an adapter or a new test
+  writes for the two records, whether their re-export goes once the engine's tests name the
+  library crate, which is a guarded change, or whether a core re-exports `Finding` when it
+  arrives. The tasks that meet it next:
+  [Build check names on the shared name rule](../tickets/first-release/1-library-crates/build-check-names-on-the-shared-name-rule.md)
   and [Read continual.toml](../tickets/first-release/2-pipeline/read-continual-toml.md).

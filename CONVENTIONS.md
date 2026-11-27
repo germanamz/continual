@@ -54,6 +54,7 @@ One term per concept (Q1). Reuse these words in code, tests and docs.
 | Rule | A convention contributors follow, with an ID such as B1 or T6. A check enforces one or more rules. |
 | Check | One of Continual's own inspections, such as `comments`, which a step runs and which either passes or reports findings. Named by a check name (`CheckName`). |
 | Check name | The lowercase, hyphenated name of a check, such as `comments` (`CheckName`). |
+| Name | The lowercase, hyphenated text that names a step, a check, a pipeline or a package, such as `fmt-edited` (`Name`). Every kind of name follows this one rule, and each kind is a type of its own built on it, such as `StepName`. |
 | Finding | One violation a check reports, located as `path:line: message`. |
 | Step | A named definition in `continual.toml` of what to run: a tool, or checks to run in order. A step never says what it depends on. |
 | Required entry | A step as one pipeline lists it, whose failure skips everything downstream of it in that pipeline. A pipeline's entries are required unless it says otherwise, so one step can be required in one pipeline and not in another. |

@@ -9,8 +9,9 @@ use continual_engine::workspace::ProblemKind::{
 };
 use continual_engine::workspace::{
     CheckEntry, Command, ConfigInput, Located, Location, Problem, ProblemKind, Step, StepInput,
-    StepKind, StepNameError, Workspace,
+    StepKind, Workspace,
 };
+use continual_vocabulary::NameError;
 
 const THIRTY_MINUTES: Duration = Duration::from_mins(30);
 
@@ -165,7 +166,7 @@ fn a_step_with_neither_run_nor_checks_is_rejected() {
 fn an_invalid_step_name_is_rejected_with_its_first_offending_character() {
     let kind = InvalidStepName {
         name: "fmt_All".to_owned(),
-        error: StepNameError::ForbiddenCharacter {
+        error: NameError::ForbiddenCharacter {
             index: 3,
             character: '_',
         },
@@ -268,7 +269,7 @@ fn every_problem_of_a_step_is_reported() {
         timeout: Some(located(Duration::ZERO, 12)),
         ..tool_step(10)
     };
-    let error = StepNameError::InvalidStart { character: '-' };
+    let error = NameError::InvalidStart { character: '-' };
     let (name, step) = ("-".to_owned(), "-".to_owned());
     let expected = vec![
         problem(10, InvalidStepName { name, error }),
@@ -348,11 +349,11 @@ fn a_problem_prints_as_its_location_and_what_is_wrong() {
 fn an_invalid_step_name_prints_with_the_name_and_what_breaks_it() {
     let kind = InvalidStepName {
         name: "Fmt".to_owned(),
-        error: StepNameError::InvalidStart { character: 'F' },
+        error: NameError::InvalidStart { character: 'F' },
     };
     assert_eq!(
         problem(4, kind).to_string(),
-        "continual.toml:4: invalid step name \"Fmt\": step name starts with 'F', not a lowercase letter"
+        "continual.toml:4: invalid step name \"Fmt\": name starts with 'F', not a lowercase letter"
     );
 }
 

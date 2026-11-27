@@ -439,9 +439,10 @@ cores ([Workspace](workspace.md#planned-crates)), in feature modules:
   too ([Built-in checks](built-in-checks.md#the-registry-core)). It keeps `[review_gate]` and
   `[[blocked_commands]]` as located values that only the gate interprets
   ([Harness](harness.md#design)). Step, pipeline and package names are value objects of the
-  engine's own, each a type of its own over the one name rule that a check name follows too.
-  The engine writes that rule itself until it moves to the library crate
-  ([Workspace](workspace.md#library-crates)).
+  engine's own, each a type of its own built on `Name`, the library crate's one name rule,
+  which a check name follows too ([Workspace](workspace.md#library-crates)). A problem with
+  a name holds the library crate's `NameError` and says which kind of name it is, since the
+  error's own message names none.
 
   A `Workspace` is built from configuration input: plain records that hold each item as
   written, with its location, a file and a line. A location and a located value mean the
