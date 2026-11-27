@@ -8,5 +8,8 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[dependencies]
+continual-vocabulary = { path = "../../libraries/vocabulary" }
+
 [lints]
 workspace = true

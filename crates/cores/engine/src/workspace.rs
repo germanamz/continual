@@ -9,7 +9,8 @@ use core::num::NonZeroUsize;
 use core::time::Duration;
 use std::collections::BTreeMap;
 
-pub use input::{ConfigInput, Located, Location, StepInput};
+pub use continual_vocabulary::{Located, Location};
+pub use input::{ConfigInput, StepInput};
 pub use problem::{Problem, ProblemKind};
 pub use step::{CheckEntry, Command, Step, StepKind};
 pub use step_name::{StepName, StepNameError};
