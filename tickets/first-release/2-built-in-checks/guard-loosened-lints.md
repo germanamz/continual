@@ -12,8 +12,8 @@ status: pending
 
 ## Goal
 
-Add the guard's lint rules in the core: a new lint suppression, or a change that loosens the
-language's lint configuration, needs approval. The suppressions operation is added to
+Add the lint rules to the guard core: a new lint suppression, or a change that loosens the
+language's lint configuration, needs approval. The suppressions operation is added to its
 `LanguageSyntax`.
 
 ## Design
@@ -29,4 +29,4 @@ The lint bullet in [Built-in checks: guard](../../../docs/built-in-checks.md#gua
 
 ## Done when
 
-- The rules are tested in the core with the fake.
+- The rules are tested in the guard core with the fake.

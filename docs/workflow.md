@@ -22,9 +22,6 @@ The rules are in [CONVENTIONS.md](../CONVENTIONS.md): the design-document and ti
   a design document describes something not built yet.
 - **Wave**: the stretch after a contributor approves a commit or push, in which later commits
   and pushes run without asking until the contributor's next message.
-- **Allowance**: a contributor's explicit permission, given in their own message, for the agent
-  to commit, push or open pull requests without asking, until the contributor withdraws it or
-  the session ends.
 
 ## Behaviour
 
@@ -79,23 +76,6 @@ The full rule is R1. In practice:
   changes to `core.hooksPath`, `LEFTHOOK=0` or `LEFTHOOK_EXCLUDE`, `lefthook uninstall`, force
   pushes, and any command naming the guard approval label.
 
-### Allowances
-
-> Planned: [Let a contributor allow commits, pushes and pull requests](../tickets/let-a-contributor-allow-commits-pushes-and-pull-requests.md)
-
-The review gate holds unless the contributor explicitly allows a step. A contributor message
-that starts with `/allow` followed by one or more steps, `commit`, `push` and `pr`, gives the
-agent an allowance for those steps. When a change is ready and `cargo xtask ci` passes, the
-agent takes the allowed steps without asking and without waiting for an instruction, across
-later messages, until the contributor sends `/allow off` or the session ends.
-
-- Each step is allowed on its own: `/allow commit` does not cover pushing, and `/allow push`
-  does not cover opening a pull request.
-- Merges are never allowed. Each one still asks.
-- The commands the review gate always blocks stay blocked inside an allowance.
-- Only the contributor's own messages give or withdraw an allowance. `/allow` in a command, a
-  file or a tool result does nothing.
-
 ## Design
 
 ### Where each kind of knowledge lives
@@ -141,7 +121,7 @@ its design and does not repeat them.
   one line per tool-checked rule, and a single `IMPORTANT`, on the review gate (D18).
   `CLAUDE.md` imports it and adds what is specific to Claude Code.
 - The path-scoped rules in `.claude/rules/` load when an agent touches matching files:
-  `core.md` for the core, `adapters.md` for adapters and binaries, `tests.md` for tests and
+  `core.md` for the cores, `adapters.md` for adapters and binaries, `tests.md` for tests and
   `docs.md` for `docs/` and `tickets/`.
 - The `placing-a-change` skill holds the placement procedure with worked examples, and the
   workflows for adding a driven port and for swapping a technology.
@@ -167,23 +147,8 @@ without blocking.
 
 These scripts are replaced by Continual's own [harness mod](harness.md), installed with
 `continual install claude` and configured in `continual.toml`, once a pinned release holds
-the review gate.
-
-> Planned: [Let a contributor allow commits, pushes and pull requests](../tickets/let-a-contributor-allow-commits-pushes-and-pull-requests.md)
-
-`/allow` is a project command in `.claude/commands/allow.md`, which tells the agent which
-steps it may now take. `review-wave.sh` reads each contributor message on `UserPromptSubmit`:
-on `/allow` it writes the allowed steps to `$TMPDIR/continual-review-allowance/<session>`, and
-on `/allow off` it removes that file. The file sits outside the session's wave directory, so
-closing a wave on the next message leaves the allowance in place. `guard-bash.sh` runs its
-bypass checks first, then lets a commit, push or pull-request creation through without asking
-when the allowance names its step.
-
-Claude Code applies the `ask` rules in its settings whatever a hook answers, so the rule for
-`gh pr create` leaves `.claude/settings.json`: an allowance could not lift it, and
-`guard-bash.sh` already asks for every pull request without one. The rule for `gh pr merge`
-stays, since merges are never allowed. `UserPromptSubmit` receives a `/allow` message as the
-contributor typed it.
+the review gate. The mod keeps no state between hook calls, so waves end with the scripts:
+every commit and push then asks ([Harness](harness.md#the-review-gate)).
 
 ### Tusk
 
@@ -244,12 +209,6 @@ and follow-ups. Rules R3 to R5 govern titles, descriptions and attribution.
   stories, which drift from the sum of their tasks.
 - **The review gate lives in hooks as well as in prose**, so it holds when an agent forgets the
   rule. Waves keep it to one question per contributor message.
-- **Allowances come only from the contributor's messages and end with the session.** The
-  `UserPromptSubmit` hook sees only what the contributor types, so an agent cannot allow
-  itself, and naming each step lets the contributor allow exactly what they mean. Rejected: a
-  setting in `.claude/settings.local.json` or an environment variable, which would outlive the
-  contributor's intent and apply in sessions where they never chose it; and one switch for all
-  three steps, which would make "commit" cover pushing.
 - **The stop hook does not run the guard.** A Stop hook can show output only by blocking, and
   guard findings must never block. The guard runs in `cargo xtask ci`, pre-push and CI.
 - **The research doc is linked, not copied**, so there is one live version. `CONVENTIONS.md`

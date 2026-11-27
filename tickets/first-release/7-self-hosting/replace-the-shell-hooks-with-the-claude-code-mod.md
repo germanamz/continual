@@ -23,9 +23,9 @@ and [Harness](../../../docs/harness.md).
 
 ## Behaviours to test
 
-- Every behaviour the `xtask` hook tests check today holds with the mod: bypasses blocked,
-  waves, pull requests asking inside a wave, and every form of commit, push and pull request
-  asking.
+- The behaviours the `xtask` hook tests check today hold with the mod, apart from waves:
+  bypasses are blocked, and every form of commit, push and pull request asks.
+- Waves end with the scripts: a second commit after an approved one asks again.
 - The edit and stop hooks run the steps `[events]` maps.
 - `jq` is no longer needed.
 

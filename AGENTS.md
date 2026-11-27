@@ -27,24 +27,28 @@ fixes for PR comments.
 
 ## Map
 
-- `crates/continual-core/`: the core. Domain types and port traits; no I/O.
+- `crates/continual-core/`: the one core so far. Domain types and port traits; no I/O. The
+  planned cores go under `crates/cores/<name>/` (`docs/workspace.md`).
 - `crates/continual/`: the CLI binary. `main.rs` is the composition root, `cli.rs` the driving
   adapter.
-- `crates/adapters/<name>/`: adapter crates (none yet).
+- `crates/adapters/<name>/`: adapter crates, bridges among them (none yet).
 - `xtask/`: the checks behind `cargo xtask`.
-- Core behaviour tests go through the public API in `crates/continual-core/tests/`.
+- A core's behaviour tests go through its public API in its own `tests/` directory.
 
 ## Invariants
 
-- The core has no technology dependencies and no I/O, clock, environment, process or
+- A core has no technology dependencies and no I/O, clock, environment, process or
   randomness (B1, B6, X1). Checked by `cargo xtask arch` and the core's `clippy.toml`.
-- Driven ports are traits declared in the core and implemented by adapters. Driving adapters
-  call core types directly, without single-implementation traits (B2, B3, P8, W2).
+- No core depends on another or shares a crate with one. A core that needs another declares a
+  driven port, and a bridge adapter implements it by calling the other core (H1–H4).
+- Driven ports are traits declared in the core that needs them and implemented by adapters.
+  Driving adapters call core types directly, without single-implementation traits (B2, B3, P8,
+  W2).
 - Adapters do not depend on each other except couplings declared in `arch.toml`, and only
   composition roots wire adapters (B4, B5). Checked by `cargo xtask arch`.
-- Checks, findings, pipelines, rules and gates are domain concepts in the core. Launching tools,
-  reading files, git and each language's parser are adapters (P1).
-- A new external dependency of the core goes on `arch.toml`'s allow-list only with a stated
+- Checks, findings, pipelines, rules and gates are domain concepts in the cores. Launching
+  tools, reading files, git and each language's parser are adapters (P1).
+- A new external dependency of a core goes on `arch.toml`'s allow-list only with a stated
   reason and the contributor's approval.
 
 ## Code
@@ -89,7 +93,8 @@ fixes for PR comments.
 - a test conflicts with the requirement, or a fix needs an existing test changed;
 - `cargo xtask guard` reports findings;
 - a check fails because of a problem outside the change;
-- a new driven port has no external actor, or it is unclear which actor owns a rule;
+- a new driven port has no external actor, or it is unclear which actor or which core owns a
+  rule;
 - a dependency or package cannot be verified.
 
 ## Commits and PRs

@@ -1,8 +1,8 @@
 ---
 type: ticket
-title: Validate pipelines in the core
+title: Validate pipelines in the engine
 blocks:
-  - tickets/first-release/1-pipeline/schedule-a-run-in-the-core
+  - tickets/first-release/1-pipeline/schedule-a-run-in-the-engine
   - tickets/first-release/1-pipeline/declare-the-config-source-port
 parent: tickets/first-release/1-pipeline/story
 points: 3
@@ -10,18 +10,18 @@ priority: high
 status: pending
 ---
 
-# Validate pipelines in the core
+# Validate pipelines in the engine
 
 ## Goal
 
-Add pipelines to the core's `Workspace`: named, ordered lists of entries that start at their
+Add pipelines to the engine's `Workspace`: named, ordered lists of entries that start at their
 first entry, each a step with the entries above it that it depends on and whether it is
 required, and pipelines that depend on other pipelines, all rejected at construction when an
 entry, a reference or a cycle is wrong.
 
 ## Design
 
-The `workspace` module in [Pipeline: core](../../../docs/pipeline.md#core), the pipeline keys in
+The `workspace` module in [Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core), the pipeline keys in
 [Pipeline: `continual.toml`](../../../docs/pipeline.md#continualtoml) and
 [pipelines](../../../docs/pipeline.md#pipelines).
 
@@ -40,4 +40,4 @@ The `workspace` module in [Pipeline: core](../../../docs/pipeline.md#core), the 
 
 ## Done when
 
-- Core tests cover each behaviour through the public API, with no port and no I/O.
+- The engine core's tests cover each behaviour through the public API, with no port and no I/O.

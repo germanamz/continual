@@ -26,7 +26,7 @@ whose tools never run without a time limit, the same way on every machine and in
   [commands](../../../docs/pipeline.md#commands), [timeouts](../../../docs/pipeline.md#timeouts),
   [pipelines](../../../docs/pipeline.md#pipelines) and
   [output and exit codes](../../../docs/pipeline.md#output-and-exit-codes).
-- [Pipeline: core](../../../docs/pipeline.md#core),
+- [Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core),
   [ports and adapters](../../../docs/pipeline.md#ports-and-adapters) and
   [composition root](../../../docs/pipeline.md#composition-root).
 - [Workspace: planned crates](../../../docs/workspace.md#planned-crates).

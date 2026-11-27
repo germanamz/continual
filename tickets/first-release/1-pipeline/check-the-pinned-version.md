@@ -31,4 +31,4 @@ The `[continual] version` bullet in
 
 ## Done when
 
-- The binary's version is passed into the core as a value, never read there (X1, X4).
+- The binary's version is passed into the engine core as a value, never read there (X1, X4).

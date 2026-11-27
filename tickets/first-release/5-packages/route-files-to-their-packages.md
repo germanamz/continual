@@ -26,8 +26,11 @@ package rules in [Pipeline: events](../../../docs/pipeline.md#events).
   the listed packages.
 - An event runs a package's pipelines only when the package owns one of its files, with only
   those files in its `{files}`; the root's pipelines run on every event.
-- A per-file check in a root step inspects only the files the root owns.
+- A per-file check in a root step inspects only the files the root owns: the engine hands a
+  check step the directories of the packages inside its own, and the check registry leaves
+  the files under them out.
 
 ## Done when
 
-- The rules are tested in the core with fakes.
+- Each rule is tested with fakes in the core that owns it: file ownership in the engine, the
+  files a per-file check inspects in the registry.

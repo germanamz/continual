@@ -15,7 +15,7 @@ status: pending
 ## Goal
 
 Make every product crate publishable to crates.io, with the metadata crates.io requires and
-each adapter under its `continual-` name, checked on every pull request.
+each core and adapter under its `continual-` name, checked on every pull request.
 
 ## Design
 

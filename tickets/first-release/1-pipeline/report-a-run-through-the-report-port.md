@@ -32,4 +32,4 @@ and [output and exit codes](../../../docs/pipeline.md#output-and-exit-codes).
 
 ## Done when
 
-- The contract suite and the fake live in the core's `testing` module.
+- The contract suite and the fake live in the engine core's `testing` module.

@@ -32,4 +32,4 @@ and the validation rules in [Pipeline: `continual.toml`](../../../docs/pipeline.
 
 ## Done when
 
-- The contract suite and the fake live in the core's `testing` module.
+- The contract suite and the fake live in the engine core's `testing` module.

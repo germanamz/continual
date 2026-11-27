@@ -11,12 +11,14 @@ status: pending
 
 ## Goal
 
-Add `continual guard --ci --labels <list>`, which runs the guard outside any step with the
-base revision's settings, so CI runs it even when a change removes it from the steps.
+Add `continual guard --ci --labels <list>`: the check registry runs one check by name outside
+any step, with the base revision's settings, so CI runs the guard even when a change removes
+it from the steps.
 
 ## Design
 
-The `continual guard` sentence in [Built-in checks: guard](../../../docs/built-in-checks.md#guard).
+The `continual guard` paragraph in [Built-in checks: guard](../../../docs/built-in-checks.md#guard)
+and [the registry core](../../../docs/built-in-checks.md#the-registry-core).
 
 ## Behaviours to test
 
@@ -27,4 +29,5 @@ The `continual guard` sentence in [Built-in checks: guard](../../../docs/built-i
 
 ## Done when
 
-- The command is a driving-adapter change only, calling one core operation (A2).
+- The command calls one operation of the registry core (A2), which is tested there with a
+  fake check.

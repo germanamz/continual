@@ -101,6 +101,16 @@ This document describes how the checks work and why they are built this way.
 - **`ci`** runs the pipeline. Its step list is data in `xtask/src/pipeline.rs`, so the order,
   the arguments and the required-tool table are tested.
 
+> Planned: [Hold Continual's rules in several cores](../tickets/first-release/0-cores/story.md)
+
+`arch` learns several cores ([Workspace](workspace.md#planned-crates)). `arch.toml` names
+the directory that holds them, and every crate under it is a core with an allow-list of
+external crates of its own. A core depends on no workspace crate, another core included. An
+adapter depends only on cores and on declared couplings, so a bridge depends on the two
+cores it joins. The source scan covers every core, each core carries a `clippy.toml` with the
+lists `crates/continual-core/clippy.toml` holds today, and `coverage` requires 95% of the
+lines of each core.
+
 ### Tests
 
 The tests run under cargo-nextest. Its `ci` profile in `.config/nextest.toml` turns off

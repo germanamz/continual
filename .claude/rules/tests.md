@@ -11,8 +11,9 @@ The full rules are in `CONVENTIONS.md`.
 - Core tests go through the public API, with no files, network, processes or real clock; driven
   ports get hand-written in-memory fakes (T3, T4, T9).
 - Each driven port has one contract suite: a generic function such as
-  `fn tool_runner_contract(make: impl Fn() -> Box<dyn ToolRunner>)` in `continual-core`'s
-  `testing` module (behind the `testing` feature, enabled through dev-dependencies), called from
+  `fn tool_runner_contract(make: impl Fn() -> Box<dyn ToolRunner>)` in the `testing` module of
+  the core that declares the port (behind the `testing` feature, enabled through
+  dev-dependencies), called from
   one `#[test]` per implementation: the fake on every run, real adapters in CI. Change the suite
   before changing the port (T6). The `placing-a-change` skill shows the wiring.
 - Driving-adapter tests run the real binary (`env!("CARGO_BIN_EXE_continual")`) and assert

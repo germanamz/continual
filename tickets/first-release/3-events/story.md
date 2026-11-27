@@ -23,7 +23,7 @@ agent harnesses run the same steps through one implementation
 
 [Pipeline: placeholders](../../../docs/pipeline.md#placeholders),
 [events](../../../docs/pipeline.md#events) and the `events` module in
-[Pipeline: core](../../../docs/pipeline.md#core).
+[Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core).
 
 ## Behaviours to test
 

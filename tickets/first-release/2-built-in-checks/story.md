@@ -15,8 +15,8 @@ status: pending
 ## Goal
 
 Bring the comments, architecture, guard and commit-message checks from `xtask` into
-Continual as built-in checks that check steps run, with one implementation of each rule in the
-core and Rust supported through the first language adapter ([rules](../../../VISION.md#rules),
+Continual as built-in checks that check steps run, each rule in a core of its own behind the
+check registry, and Rust supported through the first language adapter ([rules](../../../VISION.md#rules),
 [languages](../../../VISION.md#languages)).
 
 ## Design
@@ -32,5 +32,6 @@ tests unchanged.
 ## Done when
 
 - Every child ticket is completed.
-- `SourceTree`, `ChangeHistory` and `LanguageSyntax` have contract suites, fakes and adapters.
+- Every port the registry and the check cores declare has a contract suite, a fake and its
+  adapter or bridge.
 - The design documents describe the change, and its planned markers are gone.

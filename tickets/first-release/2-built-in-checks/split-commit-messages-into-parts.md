@@ -3,7 +3,7 @@ type: ticket
 title: Split commit messages into parts
 blocks: tickets/first-release/2-built-in-checks/reject-ai-attribution-in-messages
 parent: tickets/first-release/2-built-in-checks/story
-points: 1
+points: 2
 priority: medium
 status: pending
 ---
@@ -12,12 +12,14 @@ status: pending
 
 ## Goal
 
-Give the core a commit message value that splits into the subject, the body, the trailers and
-the whole message, which every message rule reads.
+Create the commit-messages core, `continual-commit-messages`, with a commit message value that
+splits into the subject, the body, the trailers and the whole message, which every message
+rule reads.
 
 ## Design
 
-The `part` bullet in [Built-in checks: commit messages](../../../docs/built-in-checks.md#commit-messages).
+The `part` bullet in [Built-in checks: commit messages](../../../docs/built-in-checks.md#commit-messages)
+and [the check cores](../../../docs/built-in-checks.md#the-check-cores).
 
 ## Behaviours to test
 
@@ -28,4 +30,6 @@ The `part` bullet in [Built-in checks: commit messages](../../../docs/built-in-c
 
 ## Done when
 
-- The value is tested in the core through the public API.
+- The value is tested in the commit-messages core through its public API.
+- `arch.toml` classifies the new core, which depends on no other workspace crate and carries
+  a `clippy.toml` of its own.

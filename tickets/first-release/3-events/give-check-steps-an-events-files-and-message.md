@@ -3,7 +3,7 @@ type: ticket
 title: Give check steps an event's files and message
 blocks: tickets/first-release/3-events/run-an-event-from-the-command-line
 parent: tickets/first-release/3-events/story
-points: 2
+points: 3
 priority: medium
 status: pending
 ---
@@ -37,4 +37,7 @@ bullet in [check steps](../../../docs/built-in-checks.md#check-steps),
 
 ## Done when
 
-- The rules are tested in the core with fakes.
+- Each rule is tested with fakes in the core that owns it: what an event hands a check step
+  in the engine, the files a per-file check inspects in the registry, and the message file in
+  the commit-messages core.
+- The `engine-registry` bridge carries the event's files and message file to the registry.

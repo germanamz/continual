@@ -19,8 +19,8 @@ cargo, built from source or downloaded, and the releases that repositories pin i
 - `cargo build --release --package continual` builds it from a clone of the repository.
 - Each release on GitHub attaches a prebuilt `continual` executable for Linux (x86-64 and
   ARM64), macOS (x86-64 and ARM64) and Windows (x86-64), each with a SHA-256 checksum.
-- Every form is the same self-contained executable. Every language adapter is compiled in;
-  there are no plugins to install and no runtime to provide.
+- Every form is the same self-contained executable. Every built-in check and every language
+  adapter is compiled in; there are no plugins to install and no runtime to provide.
 - When a repository pins a version that the installed binary is not, Continual prints the
   `cargo install` command for the pinned version.
 - A release happens when a contributor merges the release pull request. Nothing is tagged,
@@ -40,10 +40,11 @@ cargo, built from source or downloaded, and the releases that repositories pin i
   access token kept as a repository secret, not the workflow's default token. GitHub starts no
   workflow on its own for an event the default token creates, so with it the release pull
   request's checks would not run by themselves and the release would start no build.
-- The product crates (`continual-core`, the adapters and `continual`) share one version, set
-  in `[workspace.package]`, and are published together. Adapter crates are published under
-  `continual-` names, such as `continual-git`, while their directories keep the short names.
-  `xtask` is never published.
+- The product crates (the cores, the adapters and `continual`) share one version, set in
+  `[workspace.package]`, and are published together. Core and adapter crates are published
+  under `continual-` names, such as `continual-engine` and `continual-git`, while their
+  directories keep the short names ([Workspace](workspace.md#planned-crates)). `xtask` is
+  never published.
 - Pinning this repository to the new release is a separate pull request
   ([Checks: self-hosting](checks.md#self-hosting)).
 

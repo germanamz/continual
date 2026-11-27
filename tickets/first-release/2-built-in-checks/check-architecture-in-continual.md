@@ -4,6 +4,7 @@ title: Check architecture in Continual
 blocks:
   - tickets/first-release/2-built-in-checks/read-rust-crates-and-their-dependencies
   - tickets/first-release/2-built-in-checks/forbid-imports-in-a-layer
+  - tickets/first-release/2-built-in-checks/load-units-from-the-source-tree
 parent: tickets/first-release/2-built-in-checks/story
 points: 3
 priority: medium
@@ -14,13 +15,15 @@ status: pending
 
 ## Goal
 
-Write the architecture check's layer rules in the core, over the units and dependencies a
-language adapter reads from manifests, with the manifest operation added to `LanguageSyntax`.
+Create the architecture core, `continual-architecture`, with the layer rules over the units
+and dependencies a language adapter reads from manifests, and its `LanguageSyntax` port with
+the manifest operation.
 
 ## Design
 
-[Built-in checks: architecture](../../../docs/built-in-checks.md#architecture) and the
-`LanguageSyntax` row in [ports and adapters](../../../docs/built-in-checks.md#ports-and-adapters).
+[Built-in checks: architecture](../../../docs/built-in-checks.md#architecture),
+[the check cores](../../../docs/built-in-checks.md#the-check-cores) and the architecture rows in
+[ports and adapters](../../../docs/built-in-checks.md#ports-and-adapters).
 
 ## Behaviours to test
 
@@ -35,4 +38,6 @@ language adapter reads from manifests, with the manifest operation added to `Lan
 
 ## Done when
 
-- The rules are tested in the core with the fake.
+- The rules are tested in the architecture core with the fake.
+- `arch.toml` classifies the new core, which depends on no other workspace crate and carries
+  a `clippy.toml` of its own.

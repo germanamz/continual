@@ -3,7 +3,7 @@ type: ticket
 title: Check comments in Continual
 blocks:
   - tickets/first-release/2-built-in-checks/read-rust-comments
-  - tickets/first-release/2-built-in-checks/check-comments-in-every-tracked-file
+  - tickets/first-release/2-built-in-checks/join-the-comments-check-to-the-registry
 parent: tickets/first-release/2-built-in-checks/story
 points: 3
 priority: high
@@ -14,13 +14,13 @@ status: pending
 
 ## Goal
 
-Write the comments rule once in the core, over the comment facts a language adapter reports,
-and add the `LanguageSyntax` port with the comments operation it needs.
+Create the comments core, `continual-comments`, with the comments rule written once over the
+comment facts a language adapter reports, and its `LanguageSyntax` port.
 
 ## Design
 
 [Built-in checks: comments](../../../docs/built-in-checks.md#comments),
-[core](../../../docs/built-in-checks.md#core) and the `LanguageSyntax` row in
+[the check cores](../../../docs/built-in-checks.md#the-check-cores) and the comments row in
 [ports and adapters](../../../docs/built-in-checks.md#ports-and-adapters).
 
 ## Behaviours to test
@@ -30,8 +30,11 @@ and add the `LanguageSyntax` port with the comments operation it needs.
 - Any block comment is reported, a nested one counting once.
 - A line comment the language marks as code is reported.
 - Doc comments are never reported.
-- `LanguageSyntax` is documented per P5, and the fake passes its contract suite for comments.
+- A file whose extension no language adapter states is answered as not read, never as clean.
+- `LanguageSyntax` is documented per P5, and the fake passes its contract suite.
 
 ## Done when
 
-- The rule is tested in the core with the fake; no language parser is in the core.
+- The rule is tested in the comments core with the fake; no language parser is in it.
+- `arch.toml` classifies the new core, which depends on no other workspace crate and carries
+  a `clippy.toml` of its own.

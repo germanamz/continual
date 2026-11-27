@@ -12,8 +12,9 @@ status: pending
 
 ## Goal
 
-Implement the staged and uncommitted files of `ChangeHistory` in the `continual-git` adapter,
-with git's prompts turned off and a time limit, so reading them never hangs.
+Implement the staged and uncommitted files of the engine's `ChangeHistory` in the
+`continual-git` adapter, with git's prompts turned off and a time limit, so reading them never
+hangs.
 
 ## Design
 

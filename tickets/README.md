@@ -23,6 +23,7 @@ tickets/
 ├── <task>.md                     a task outside any epic
 └── first-release/
     ├── epic.md                   Self-host Continual on its first release
+    ├── 0-cores/
     ├── 1-pipeline/
     │   ├── story.md              Run a repository's steps from continual.toml
     │   ├── validate-step-definitions.md
@@ -44,8 +45,8 @@ guide:
 | --- | --- |
 | 1 | One small change in one layer with its tests, such as a new case in a value object or one more setting an existing adapter reads. |
 | 2 | One core rule or type, or one port operation added to an existing port and adapter, with its tests. |
-| 3 | A new port with its contract suite, fake and first adapter, or a feature module's first slice in the core. |
-| 5 or more | More than one of these, or a change across the core and several adapters: a story. |
+| 3 | A new port with its contract suite, fake and first adapter, or the first slice of a core or of one of its feature modules. |
+| 5 or more | More than one of these, or a change across a core and several adapters: a story. |
 
 A task is workable on its own, as K9 defines it. A port arrives with the first task that uses
 it, and an adapter with the first task that needs it, so no task leaves code waiting for the

@@ -1,7 +1,9 @@
 ---
 type: ticket
 title: Forbid imports in a layer
-blocks: tickets/first-release/2-built-in-checks/read-rust-imports
+blocks:
+  - tickets/first-release/2-built-in-checks/read-rust-imports
+  - tickets/first-release/2-built-in-checks/load-units-from-the-source-tree
 parent: tickets/first-release/2-built-in-checks/story
 points: 2
 priority: medium
@@ -12,8 +14,8 @@ status: pending
 
 ## Goal
 
-Add the architecture check's `forbidden_imports` rule in the core, over the imports a
-language adapter reports, with the imports operation added to `LanguageSyntax`.
+Add the `forbidden_imports` rule to the architecture core, over the imports a language
+adapter reports, with the imports operation added to its `LanguageSyntax`.
 
 ## Design
 
@@ -29,4 +31,4 @@ The `forbidden_imports` bullet in [Built-in checks: architecture](../../../docs/
 
 ## Done when
 
-- The rule is tested in the core with the fake.
+- The rule is tested in the architecture core with the fake.

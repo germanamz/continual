@@ -1,6 +1,6 @@
 ---
 type: ticket
-title: Schedule a run in the core
+title: Schedule a run in the engine
 blocks: tickets/first-release/1-pipeline/drive-a-run-through-the-tool-runner
 parent: tickets/first-release/1-pipeline/story
 points: 3
@@ -8,18 +8,18 @@ priority: high
 status: pending
 ---
 
-# Schedule a run in the core
+# Schedule a run in the engine
 
 ## Goal
 
-Give the core the `pipeline` module's `Run`: a pure state machine that plans the pipelines
+Give the engine core the `pipeline` module's `Run`: a pure state machine that plans the pipelines
 asked for and the pipelines they depend on, says which entries are ready, records each outcome,
 skips the downstream of a failed required entry and the pipelines that depend on a failed one,
 and ends with a verdict. No port is involved yet.
 
 ## Design
 
-The `pipeline` module in [Pipeline: core](../../../docs/pipeline.md#core),
+The `pipeline` module in [Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core),
 [pipelines](../../../docs/pipeline.md#pipelines) and the exit-code table in
 [output and exit codes](../../../docs/pipeline.md#output-and-exit-codes).
 
@@ -41,4 +41,4 @@ The `pipeline` module in [Pipeline: core](../../../docs/pipeline.md#core),
 
 ## Done when
 
-- The state machine is tested through the core's public API, with no port and no I/O.
+- The state machine is tested through the engine core's public API, with no port and no I/O.

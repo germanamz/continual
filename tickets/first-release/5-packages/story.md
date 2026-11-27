@@ -19,7 +19,7 @@ pipeline, so one command covers every package ([pipeline](../../../VISION.md#pip
 ## Design
 
 [Pipeline: packages](../../../docs/pipeline.md#packages) and the `workspace` module in
-[Pipeline: core](../../../docs/pipeline.md#core).
+[Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core).
 
 ## Behaviours to test
 

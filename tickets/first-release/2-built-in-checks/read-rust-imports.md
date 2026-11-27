@@ -11,7 +11,8 @@ status: pending
 
 ## Goal
 
-Implement the imports operation of `LanguageSyntax` in `continual-rust` with `syn`, so
+Implement the imports operation of the architecture core's `LanguageSyntax` in
+`continual-rust` with `syn`, so
 `forbidden_imports` works on Rust as the `xtask` arch check's source scan does today.
 
 ## Design
@@ -20,7 +21,8 @@ The `rust` notes in [Built-in checks: ports and adapters](../../../docs/built-in
 
 ## Behaviours to test
 
-- The `LanguageSyntax` contract suite for imports passes against the adapter.
+- The architecture core's `LanguageSyntax` contract suite for imports passes against the
+  adapter.
 - `use` items, grouped and renamed ones included, and full paths in expressions and types are
   reported with their lines.
 - Each case the `xtask` arch source-scan tests cover gives the same findings.

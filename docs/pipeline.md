@@ -95,14 +95,21 @@ depends_on = ["fmt"]
   of Continual's own working tree ([Checks: self-hosting](checks.md#self-hosting)). The
   version is checked before anything else in the file, and a binary of another version reports
   only the mismatch, since the rest of the file may hold keys that binary does not know.
+- `[continual] jobs` is how many entries may run at once across a run, check steps and tool
+  steps alike. It is a whole number of 1 or more, and only the root configuration holds it.
+  Without it the limit is the number of CPUs, and `jobs = 1` runs one entry at a time
+  ([pipelines](#pipelines)).
 - `[steps.<name>]` defines a step. A step name follows the rules of a check name: lowercase
   ASCII letters, digits and single hyphens between them, starting with a letter.
 - `run` makes it a tool step and `checks` makes it a check step; a step has exactly one of
   them. A step never says what it depends on.
 - `install` is the command Continual prints when the step's program is not found.
-- `timeout` bounds how long the step's tool may run, written as `"90s"`, `"20m"` or `"1h30m"`.
-  A step without one gets `[continual] timeout`, which is 30 minutes unless the root
-  configuration sets it. No tool runs without a limit ([timeouts](#timeouts)).
+- `timeout` bounds how long the step may run, a tool step's tool or a check step's checks,
+  written as `"90s"`, `"20m"` or `"1h30m"`. A step without one gets `[continual] timeout`,
+  which is 30 minutes unless the root configuration sets it. No step runs without a limit
+  ([timeouts](#timeouts)).
+- `batch = true` lets a step whose `{files}` do not fit one command line run its tool once for
+  each batch of them ([placeholders](#placeholders)).
 - `[pipelines.<name>]` defines a pipeline, named like a step. Its entries are an array,
   `[[pipelines.<name>.steps]]`, which TOML keeps in the order written. Each entry names its
   `step`, the entries above it that it `depends_on`, and whether it is `required` (by default
@@ -122,8 +129,10 @@ it`. The problems it reports are an unknown key or value, a pipeline entry namin
 step, a step listed twice in one pipeline, a starting entry with `depends_on`, a later entry
 without it, an entry depending on one that is not above it, an unknown pipeline or package in
 a pipeline's `depends_on`, a cycle among pipelines (named in order), a step with both or
-neither of `run` and `checks`, and a timeout that is not a positive duration. A version that
-does not match the binary is reported alone, before any of these.
+neither of `run` and `checks`, an unclosed quote or a shell operator in a step's `run`,
+`batch` on a step whose `run` has no `{files}`, a timeout that is not a positive duration,
+and a `jobs` below 1. A version that does not match the binary is
+reported alone, before any of these.
 
 ### Commands
 
@@ -132,7 +141,8 @@ does not match the binary is reported alone, before any of these.
 A tool step's `run` is split into words the way a shell splits them, with quotes grouping
 words, but no shell runs it. There are no pipes, redirections, `&&`, globbing or variable
 expansion, so the same step behaves the same on Linux, macOS and Windows. A step that needs a
-shell runs a script instead. The tool runs in the directory of the step's package and inherits
+shell runs a script instead. A shell operator outside quotes, such as `&&`, `|` or `>`, is a
+configuration error that names it, so it never reaches the tool as an argument. The tool runs in the directory of the step's package and inherits
 Continual's environment.
 
 A step whose program is not on the `PATH` could not run. Continual says which program is
@@ -142,10 +152,10 @@ missing and prints the step's `install` command, or says that the step has none.
 
 > Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
 
-A hung tool must never hold up an agent's turn or a CI job until something outside Continual
-gives up, so every tool runs with a time limit.
+A hung step must never hold up an agent's turn or a CI job until something outside Continual
+gives up, so every step runs with a time limit, a tool step and a check step alike.
 
-- A step's timeout counts only its own tool's running time, not the time it waits for its
+- A step's timeout counts only its own running time, not the time it waits for its
   dependencies.
 - When a tool runs past its timeout, Continual stops it and every process it started: first
   it asks them to stop (`SIGTERM` to the tool's process group on Unix, `CTRL_BREAK` to it on
@@ -157,9 +167,15 @@ gives up, so every tool runs with a time limit.
   started, reports the outcome of every finished one, and exits with code 130. So does telling
   it to stop (`SIGTERM` or `SIGHUP` on Unix, closing its console on Windows), as a cancelled CI
   job or a harness that gives up on a hook does, so no tool outlives Continual.
-- Check steps run inside Continual. The `git` commands behind them run with git's prompts
-  turned off and a time limit of their own, so a credential prompt or a stuck repository makes
-  the check could-not-run instead of hanging ([Built-in checks](built-in-checks.md#design)).
+- A check step runs inside Continual, so there is no process to stop. When it runs past its
+  timeout, Continual stops waiting for its checks and the step fails with
+  `timed out after 20m`, like a tool step.
+- The `git` commands behind a check also run with git's prompts turned off and a limit of
+  their own, so a credential prompt or a stuck repository makes the check could-not-run well
+  before the step's timeout ([Built-in checks](built-in-checks.md#design)).
+- An agent harness applies a timeout of its own to each hook, which
+  `continual install claude` writes from these limits. After changing a timeout, run the
+  installer again ([Harness](harness.md#keeping-the-mod-up-to-date)).
 
 ### Placeholders
 
@@ -191,6 +207,14 @@ matches, the step has nothing to do: it is skipped and reported as skipped, not 
 That is not a failure. The entries that depend on it still run, and it does not fail the run.
 Placeholders stay a fixed set until a use needs more; they are not general variables.
 
+Every platform limits how long a command line may be. A step whose `{files}` do not fit that
+limit could not run: Continual says how many files the step held and names `batch`. Splitting
+the files is the last resort, and a step asks for it itself with `batch = true`. Continual
+then runs the tool once for each batch of files that fits, one batch after another, as
+`xargs` does. Every batch runs, even after one fails; the step fails when any of them does,
+and its timeout covers all of them together. A step whose files fit runs its tool once, with
+or without `batch`.
+
 CI inputs reach Continual as the flags `cargo xtask` takes today: `--base`, `--range`,
 `--title`, `--body`, and `--ci` with `--labels`. They go to the built-in checks that use them
 ([Built-in checks](built-in-checks.md)). Tool steps get no placeholder for them until a step
@@ -203,8 +227,10 @@ needs one.
 `continual run <pipeline>...` runs the named pipelines, each after the pipelines it depends
 on. A pipeline starts with its starting entry; every later entry starts when every entry it
 depends on has finished, so entries that do not depend on each other run at the same time, up
-to `--jobs` at once across the run (by default, the number of CPUs). Pipelines that do not
-depend on each other run at the same time too.
+to the job limit across the run: `[continual] jobs`, or `--jobs <n>` for one invocation, and
+the number of CPUs when neither is given. A check step counts as one job, like a tool step.
+With a limit of 1, entries run one after another. Pipelines that do not depend on each other
+run at the same time too.
 
 When more entries are ready than there are free jobs, the order is fixed, so every machine
 schedules the same way: the pipelines a pipeline depends on come before it, in the order its
@@ -212,8 +238,8 @@ schedules the same way: the pipelines a pipeline depends on come before it, in t
 pipeline that runs in several packages takes them in the order of their names, the root last,
 and within a pipeline the entry written first starts first.
 
-- A step fails when its tool exits with a non-zero code, is killed or runs past its timeout,
-  when a check reports findings, or when it could not run.
+- A step fails when its tool exits with a non-zero code or is killed, when a check reports
+  findings, when the step runs past its timeout, or when it could not run.
 - When a **required** entry fails, every entry downstream of it in its pipeline is skipped,
   transitively.
 - When an entry with `required = false` fails, its failure is reported and the entries that
@@ -371,7 +397,9 @@ on_pre_push = ["ci"]
 `--files` gives `on_agent_file_edit` its files and `--message-file` gives `on_commit_msg` its
 message. The event names do not depend on any harness: the [Claude Code mod](harness.md) calls
 the agent events, and the git hooks that `continual install git` writes call the git ones.
-Hook managers such as lefthook or husky can call `continual event` themselves instead.
+Hook managers such as lefthook or husky can call `continual event` themselves instead. A
+repository that uses the Claude Code mod runs `continual install claude` again after it
+changes what an agent event runs ([Harness](harness.md#keeping-the-mod-up-to-date)).
 
 | Event | When | Files |
 | --- | --- | --- |
@@ -394,31 +422,70 @@ appears under its new name.
 
 ## Design
 
-### Core
+### The engine core
 
 > Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
 
-The pipeline's decisions are core code in `continual-core`, in feature modules:
+The pipeline's decisions are code in the engine core, `continual-engine`, one of Continual's
+cores ([Workspace](workspace.md#planned-crates)), in feature modules:
 
 - **`workspace`**: packages, steps, pipelines, their references, and the inheritance from
   `[workspace.steps]` and `[workspace.pipelines]`. Building a `Workspace` resolves every
   reference and rejects unknown steps, pipelines and packages, entries that break the
   starting-entry and above-only rules, cycles among pipelines and malformed steps (V3), so a
-  `Workspace` value always holds valid graphs, each with its entries in written order. Step,
-  pipeline and package names are value objects with `CheckName`'s parsing rules.
+  `Workspace` value always holds valid graphs, each with its entries in written order. The
+  use case that loads it asks `CheckRunner` to read each check entry's settings and passes
+  the answers in (M5), so an unknown check and a setting its check rejects are caught here
+  too ([Built-in checks](built-in-checks.md#the-registry-core)). It keeps `[review_gate]` and
+  `[[blocked_commands]]` as located values that only the gate interprets
+  ([Harness](harness.md#design)). Step, pipeline and package names are value objects of the
+  engine's own, which follow the rules a check name follows
+  ([Workspace](workspace.md#decisions)).
 - **`pipeline`**: a `Run` plans the pipelines asked for and the pipelines they depend on, then
   works as a state machine: it says which entries are ready, in the fixed order the
   [pipelines](#pipelines) section gives, records each outcome, skips the
   downstream of a failed required entry and the pipelines that depend on a failed one, and ends
-  with a verdict naming every failed and skipped entry. It holds no threads and no clock;
-  concurrency belongs to the `ToolRunner` adapter.
+  with a verdict naming every failed and skipped entry. It holds no threads and no clock: it
+  says what may start and records what finished.
 - **`events`**: maps an event to its pipelines, routes the event's files to the packages that
-  contain them, filters them with each step's `files`, and expands placeholders.
+  contain them, filters them with each step's `files`, and expands placeholders. It measures
+  each expanded command against the platform's command-line limit, a value the composition
+  root passes in: a command that does not fit makes its step could-not-run, or is split into
+  batches when the step sets `batch`.
 
-The use case loads the workspace, plans the run, and then loops: start every ready tool entry
-on the `ToolRunner` up to the job limit, run every ready check entry in the core over the
-[check ports](built-in-checks.md#design), pass each output line the runner hands back to
-`Report` as it arrives, and record each completion, until nothing is running or ready.
+The use case loads the workspace, plans the run, and then drives it as futures. Each entry it
+starts is one future: a tool entry's comes from `ToolRunner` and a check entry's from
+`CheckRunner`. The use case keeps as many of them running as the job limit allows, started in
+the order the `Run` gives, passes each output line to `Report` as it arrives, records each
+outcome when its future ends and starts what that makes ready, until nothing is running or
+ready. Each path from a pipeline's starting entry to its last one therefore advances on its
+own, and a check entry holds up neither the lines and outcomes of the tools running beside it
+nor a request to stop. A check entry's future is raced against its step's time limit, a
+future the `Timer` port hands over: when the limit ends first, the use case drops the entry's
+future and records the step as timed out. The engine knows no check: a check entry is a name
+and settings that it passes on.
+
+The engine uses the language's own futures and nothing else. It holds no thread and depends
+on no runtime (B1, B6): the composition root builds the runtime that executes a run's
+futures, and the adapter behind each port decides how its future does its work.
+
+The run's inputs are a small record of the engine's: the base revision, the commit range, the
+pull request's title and body, and whether the run is a CI run and with which labels
+([placeholders](#placeholders)). Every check step carries it to `CheckRunner`. `--base` is
+`origin/main` unless given, a default the command line holds once for every command, so the
+cores always receive a base revision.
+
+The engine also answers what two other cores ask about the configuration, each through a
+bridge:
+
+- For the check registry, the entries one check has in the configuration at the merge base
+  with a revision ([Built-in checks](built-in-checks.md#ports-and-adapters)). This is an
+  operation of its own that needs only `ChangeHistory` and `ConfigSource`. It reads every
+  `continual.toml` at that revision into configuration input and picks the check's entries
+  out of it, each with its package. It builds no `Workspace`, asks no `CheckRunner` and
+  ignores the version the base pins, since the base only lends its settings. A base
+  configuration that cannot be read is an error, and the check that asked could not run.
+- For the gate, its sections of the configuration ([Harness](harness.md#design)).
 
 ### Ports and adapters
 
@@ -426,24 +493,33 @@ on the `ToolRunner` up to the job limit, run every ready check entry in the core
 
 > Planned: [Run steps on git and agent events](../tickets/first-release/3-events/story.md)
 
-| Port | What the core asks | Adapter |
+| Port | What the engine asks | Adapter |
 | --- | --- | --- |
-| `ConfigSource` | The root and package configurations, starting from a directory, as core configuration input with each item's location; and the same input from one configuration's text, for the guard's base revision ([Built-in checks](built-in-checks.md#guard)) | `crates/adapters/toml-config` |
-| `ToolRunner` | Start a command in a directory with a time limit; hand back, as they happen, each line a running command writes (with its stream) and each command's outcome (exit status, killed, timed out), while others keep running; stop every running command on request | `crates/adapters/process` |
-| `ChangeHistory` | The staged files and the files with uncommitted changes, for events | `crates/adapters/git` ([Built-in checks](built-in-checks.md#design)) |
+| `ConfigSource` | The root and package configurations, starting from a directory, as configuration input with each item's location, a check entry's settings among them as located values left for its check to read; and the same input from one configuration's text, for the guard's base revision ([Built-in checks](built-in-checks.md#guard)) | `crates/adapters/toml-config` |
+| `ToolRunner` | Run a command in a directory with a time limit, or a batched step's commands one after another under one limit, as a future that hands over each line a command writes as the line ends (with its stream) and ends with the outcome (exit status, killed, timed out), while other commands keep running; stop every running command on request | `crates/adapters/process` |
+| `CheckRunner` | Read a check entry's settings, which are accepted or rejected with their lines; run a step's check entries in a package, leaving out the directories of the packages inside it, over the event's files when it carries any and with the run's inputs, as a future that ends with the step's finding lines and its outcome | `crates/adapters/engine-registry`, a bridge to the check registry ([Built-in checks](built-in-checks.md#bridges)) |
+| `Timer` | A future that ends once a duration has passed, which the engine races a check step against | `crates/adapters/context`, the execution context ([Built-in checks](built-in-checks.md#ports-and-adapters)) |
+| `ChangeHistory` | The staged files and the files with uncommitted changes, for events; and each `continual.toml` at the merge base with a revision, with its text, for the configuration at the base revision | `crates/adapters/git` ([Built-in checks](built-in-checks.md#ports-and-adapters)) |
 | `Report` | Pass a step's output line through, show why a step failed, show the verdict | `crates/adapters/terminal` |
 
 - `toml-config` walks up from the directory it is given to the nearest `continual.toml`, and on
   to the root when that one is a package configuration. It owns the serde DTOs (M1, M4),
   rejects unknown keys and wrong types with their line numbers (V1), and splits `run` into
-  words, keeping placeholders as their own tokens. Whether the graphs are valid is decided in
-  the core.
+  words with the `shell-words` tokenizer ([Workspace](workspace.md#planned-crates)), keeping
+  placeholders as their own tokens and rejecting an operator. A check entry is the exception: the
+  adapter reads its `check` name and passes the settings beside it on as located values,
+  since only the check knows its own settings
+  ([Built-in checks](built-in-checks.md#bridges)). It checks the shape of `[review_gate]`
+  and `[[blocked_commands]]` like the rest of the file, the names of the gated actions
+  included, so every command rejects a mistake in them, and passes them on as located
+  values too. Whether the graphs are valid is decided in the engine.
 - `process` launches tools with `std::process`, one thread per running tool, reads each
-  stream line by line as the tool writes it, and reports a program that is not found as its
-  own error so the core can print the install command. It enforces each command's time limit
+  stream line by line as the tool writes it, ends the command's future when the tool does, and
+  reports a program that is not found as its own error so the engine can print the install
+  command. It enforces each command's time limit
   (A3): it starts every tool in a process group of its own, and on Windows in a job object as
   well, so stopping a tool stops everything the tool started, and it measures the time
-  itself, so the core needs no clock. The composition root turns Ctrl-C, and a signal that
+  itself, so the engine needs no clock. The composition root turns Ctrl-C, and a signal that
   tells Continual to stop, into a request to stop every running command.
 - `terminal` writes to the outputs the composition root gives it: standard output and error for
   the CLI, or buffers that the harness adapter returns as the hook's response
@@ -456,10 +532,15 @@ on the `ToolRunner` up to the job limit, run every ready check entry in the core
 
 > Planned: [Run steps on git and agent events](../tickets/first-release/3-events/story.md)
 
-`crates/continual/src/main.rs` reads the current directory, the CPU count and the binary's
-version, builds the adapters, and hands them with those values to the core (X1, X4). `cli.rs`
-parses `continual run`, `continual event` and `continual install git`, calls one core operation
-each, and maps the verdict to the exit code (A2).
+`crates/continual/src/main.rs` reads the current directory, the CPU count, the platform's
+command-line limit and the binary's version and builds the adapters and the cores, each after
+what it calls (B5): the technology adapters, the engine's reader of the base revision's
+entries, each check core with its bridge, the check registry, and last the engine's use
+cases, which get their adapters and those values (X1, X4). The two adapters of the
+`engine-registry` bridge sit between the engine and the registry, one for each direction. It
+also builds the runtime that executes a run's futures. `cli.rs` parses `continual run`,
+`continual event` and `continual install git`, calls one engine operation each, waits for it
+on that runtime, and maps the verdict to the exit code (A2).
 
 ## Decisions
 
@@ -511,15 +592,35 @@ each, and maps the verdict to the exit code (A2).
 - **The release is pinned in `continual.toml`.** The same file that declares the pipelines says
   which Continual runs them, so a local run and CI cannot drift apart. Rejected: pinning only in
   CI.
-- **The scheduler is a core state machine; concurrency is the adapter's.** The core stays free
-  of threads (B6) and the scheduling rules are tested with a fake `ToolRunner`.
-- **Every tool runs with a time limit, enforced by the process adapter.** The limit is the
-  repository's configuration and the core passes it with each command; measuring time and
-  stopping processes is machinery (A3, X1). A timed-out step is an ordinary failure, so
-  `required` decides what it skips. Rejected: no limit unless configured, which leaves a hung
-  tool blocking an agent's turn or a CI job until the CI's own timeout; a single limit for the
-  whole run, which cannot say which step hung; a way to turn the limit off, since a long step
-  sets a long timeout instead; and timing in the core, which would need a clock port.
+- **The scheduler is a state machine in the engine, and every entry runs as a future.** `Run`
+  decides what may start and what a failure skips, with no threads and no clock, and its
+  rules are tested with fakes. The use case waits on one future for each running entry, a
+  tool's or a check step's, so each path through a pipeline advances on its own and a check
+  step holds up neither the tools beside it nor a request to stop. The engine needs only the
+  language's futures: the runtime that executes them is built outside the cores (B1, B6).
+  Rejected: running a check step inline in the use case's loop, which holds up the lines and
+  outcomes of the tools running beside it; and threads in the engine.
+- **The job limit is the repository's configuration.** `[continual] jobs` sits beside the
+  pipelines it bounds, so a terminal, a git hook, an agent's hook and CI share one limit
+  without each repeating a flag, and a repository whose steps must not overlap sets it to 1.
+  Check steps count like tool steps, since both are work a run waits for. `--jobs` stays for
+  one invocation. Rejected: a command-line flag alone, which every hook entry and CI job would
+  have to carry; and a limit on tools only, which lets check steps pile up beside them.
+- **The engine reaches the checks through a port.** A check step is a name and settings to
+  the engine, which asks `CheckRunner` to read and to run them, so the engine changes for no
+  check and is tested with a fake. Rejected: check rules or the check registry inside the
+  engine, which would make the engine grow with every rule
+  ([Workspace](workspace.md#decisions)).
+- **Every step runs with a time limit, and the engine reads no clock.** The limit is the
+  repository's configuration. A tool's limit goes to the process adapter with its command,
+  since measuring time and stopping a process tree is machinery (A3, X1). A check step has
+  no process to stop, so the engine races its future against one the `Timer` port hands
+  over, and the waiting happens in the execution context. A timed-out step is an ordinary
+  failure, so `required` decides what it skips. Rejected: no limit unless configured, which
+  leaves a hung step blocking an agent's turn or a CI job until the CI's own timeout; a
+  single limit for the whole run, which cannot say which step hung; a way to turn the limit
+  off, since a long step sets a long timeout instead; check steps without a limit, bounded
+  only by the `git` commands behind them; and reading the time in the engine.
 - **Stopping a tool stops its whole process tree.** Test runners and build tools start
   processes of their own, and killing only the parent leaves those running. Rejected: killing
   the direct child only.
@@ -528,14 +629,9 @@ each, and maps the verdict to the exit code (A2).
   refused by a Rust formatter. It is reported as skipped, never as passed. Rejected: counting
   it as passed, which reports a check that checked nothing; and skipping what depends on it,
   which lets one file filter switch off the rest of a pipeline.
-
-## Open questions
-
-- How check entries run beside tools. The core holds no threads, so a check entry that the use
-  case runs inline holds up the lines and completions of the tools running at the same time,
-  and a stop request with them, and it has no time limit of its own.
-  [Run check steps](../tickets/first-release/2-built-in-checks/run-check-steps.md) decides it.
-- What a step does when an event's files do not fit the platform's command-line limit: run the
-  tool once for each batch of files, as `xargs` does, or report that the step could not run.
-  [Pass an event's files to its steps](../tickets/first-release/3-events/pass-an-events-files-to-its-steps.md)
-  decides it.
+- **Files that do not fit the command line stop the step, unless the step asks for batches.**
+  One run of a tool is one judgement, and a tool that reads its files together, such as a
+  type checker, judges differently when it gets them in parts, so Continual never splits them
+  on its own. `batch = true` is the step saying that its tool judges each file alone.
+  Rejected: batching every step, as `xargs` does, which silently changes what such a tool
+  checks; and never batching, which leaves a formatter unable to run on a very large commit.

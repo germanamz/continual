@@ -30,13 +30,10 @@ notes in [Harness: design](../../../docs/harness.md#design).
 - Each hook entry calls `continual hook claude <hook>` for the hooks the design's table lists.
 - Each hook entry that runs an event has a timeout that covers the event's longest run as the
   design counts it: every pipeline it runs, the pipelines they depend on and every package,
-  with each tool's timeout, its 10 seconds to stop and the allowance for check steps.
-- An `ask` rule in the settings that matches a gated action is named, since no wave or
-  allowance can lift it.
+  with each step's timeout and the 10 seconds a tool gets to stop.
 
 ## Done when
 
-- The open question on stale hook timeouts in docs/harness.md is decided and removed.
 - The design documents describe the change, and the planned markers of
   [Hold the review gate in the Claude Code mod](story.md)
   are gone.

@@ -14,12 +14,12 @@ status: pending
 
 Give every package the root's `[workspace.steps]` and `[workspace.pipelines]`, let a package
 replace either by defining one of the same name, and let a pipeline depend on another
-package's pipeline, all validated in the core's `Workspace`.
+package's pipeline, all validated in the engine's `Workspace`.
 
 ## Design
 
 [Pipeline: packages](../../../docs/pipeline.md#packages) and the `workspace` module in
-[Pipeline: core](../../../docs/pipeline.md#core).
+[Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core).
 
 ## Behaviours to test
 
@@ -35,4 +35,4 @@ package's pipeline, all validated in the core's `Workspace`.
 
 ## Done when
 
-- The rules are tested in the core through the public API.
+- The rules are tested in the engine core through the public API.

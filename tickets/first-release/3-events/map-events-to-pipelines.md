@@ -12,15 +12,15 @@ status: pending
 
 ## Goal
 
-Give the core the `events` module's first slice: read `[events]`, pick the pipelines an event
-runs with the pipelines they depend on, and refuse a run whose steps use a placeholder it
-cannot fill.
+Give the engine core the `events` module's first slice: read `[events]`, pick the pipelines an
+event runs with the pipelines they depend on, and refuse a run whose steps use a placeholder
+it cannot fill.
 
 ## Design
 
 [Pipeline: placeholders](../../../docs/pipeline.md#placeholders),
 [events](../../../docs/pipeline.md#events) and the `events` module in
-[Pipeline: core](../../../docs/pipeline.md#core).
+[Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core).
 
 ## Behaviours to test
 
@@ -32,4 +32,4 @@ cannot fill.
 
 ## Done when
 
-- The rules are tested in the core with fakes.
+- The rules are tested in the engine core with fakes.

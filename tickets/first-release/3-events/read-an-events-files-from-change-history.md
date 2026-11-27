@@ -30,5 +30,6 @@ Have the event use case read the files of `on_pre_commit` and `on_agent_turn_end
 
 ## Done when
 
-- The operations are added to `ChangeHistory`, documented per P5; the port is created here if
+- The operations are added to the engine's own `ChangeHistory`, documented per P5, with its
+  contract suite and fake in the engine core's `testing` module; the port is created here if
   it does not exist yet.

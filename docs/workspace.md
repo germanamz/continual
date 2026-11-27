@@ -7,7 +7,7 @@ know where code lives. Where a particular change goes is decided by the placemen
 
 ## Concepts
 
-Core, driven port, driving port, adapter and composition root mean what the
+Core, driven port, driving port, adapter, bridge and composition root mean what the
 [vocabulary](../CONVENTIONS.md#2-vocabulary) says. Domain terms such as check, check name,
 finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-glossary).
 
@@ -26,16 +26,22 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
 
 | Crate | Path | Role |
 | --- | --- | --- |
-| `continual-core` | `crates/continual-core/` | The core: domain types and, as they arrive, driven-port traits. No I/O and no technology dependencies. |
+| `continual-core` | `crates/continual-core/` | The one core so far: domain types and, as they arrive, driven-port traits. No I/O and no technology dependencies. |
 | `continual` | `crates/continual/` | The CLI binary. `main.rs` is the composition root and `cli.rs` the driving adapter, built on clap. |
 | `xtask` | `xtask/` | Repository tooling, the checks behind `cargo xtask` ([Checks](checks.md)). Product crates never depend on it. |
 
 Adapter crates live under `crates/adapters/<name>/`, and none exist yet. A driven port and its
 adapter arrive with the first feature that needs them. The ports are listed in
-[Continual's hexagon](../CONVENTIONS.md#3-continuals-hexagon), and the design document of each
+[Continual's cores](../CONVENTIONS.md#3-continuals-cores), and the design document of each
 area says what its ports ask.
 
+`arch.toml` classifies every crate as core, composition root, adapter or tooling, and lists
+the core's allowed external dependencies (none yet) and the couplings allowed between adapters
+(none yet). `cargo xtask arch` enforces it ([Checks](checks.md#cargo-xtask-checks)).
+
 ### Planned crates
+
+> Planned: [Hold Continual's rules in several cores](../tickets/first-release/0-cores/story.md)
 
 > Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
 
@@ -43,23 +49,60 @@ area says what its ports ask.
 
 > Planned: [Hold the review gate in the Claude Code mod](../tickets/first-release/4-claude-code-mod/story.md)
 
+Continual's rules are split into cores. Each is a crate under `crates/cores/<name>/` that
+holds one unit of logic and depends on no other workspace crate, another core included.
+`crates/continual-core` moves there as the registry core, which keeps `CheckName`.
+
+| Core | Path | Holds | Designed in |
+| --- | --- | --- | --- |
+| `continual-engine` | `crates/cores/engine/` | The feature modules `workspace`, `pipeline` and `events` | [Pipeline](pipeline.md#the-engine-core) |
+| `continual-registry` | `crates/cores/registry/` | The check registry and what every check shares | [Built-in checks](built-in-checks.md#the-registry-core) |
+| `continual-comments` | `crates/cores/comments/` | The comments check | [Built-in checks](built-in-checks.md#the-check-cores) |
+| `continual-architecture` | `crates/cores/architecture/` | The architecture check | [Built-in checks](built-in-checks.md#the-check-cores) |
+| `continual-guard` | `crates/cores/guard/` | The guard | [Built-in checks](built-in-checks.md#the-check-cores) |
+| `continual-commit-messages` | `crates/cores/commit-messages/` | The commit-messages check | [Built-in checks](built-in-checks.md#the-check-cores) |
+| `continual-rust-workspace-lints` | `crates/cores/rust-workspace-lints/` | The `rust-workspace-lints` check | [Built-in checks](built-in-checks.md#the-check-cores) |
+| `continual-gate` | `crates/cores/gate/` | The review gate and the blocked commands | [Harness](harness.md#design) |
+
+A core that needs something from outside declares a driven port for it. These adapters answer
+the ports that talk to a technology:
+
 | Crate | Path | Implements | Designed in |
 | --- | --- | --- | --- |
-| `continual-toml-config` | `crates/adapters/toml-config/` | `ConfigSource` | [Pipeline](pipeline.md#ports-and-adapters) |
-| `continual-process` | `crates/adapters/process/` | `ToolRunner` | [Pipeline](pipeline.md#ports-and-adapters) |
-| `continual-terminal` | `crates/adapters/terminal/` | `Report` | [Pipeline](pipeline.md#ports-and-adapters) |
-| `continual-git` | `crates/adapters/git/` | `SourceTree`, `ChangeHistory` | [Built-in checks](built-in-checks.md#ports-and-adapters) |
-| `continual-rust` | `crates/adapters/rust/` | `LanguageSyntax` for Rust | [Built-in checks](built-in-checks.md#ports-and-adapters) |
-| `continual-session-state` | `crates/adapters/session-state/` | `GateState` | [Harness](harness.md#design) |
+| `continual-toml-config` | `crates/adapters/toml-config/` | The engine's `ConfigSource` | [Pipeline](pipeline.md#ports-and-adapters) |
+| `continual-process` | `crates/adapters/process/` | The engine's `ToolRunner` | [Pipeline](pipeline.md#ports-and-adapters) |
+| `continual-terminal` | `crates/adapters/terminal/` | The engine's `Report` | [Pipeline](pipeline.md#ports-and-adapters) |
+| `continual-git` | `crates/adapters/git/` | `SourceTree` and `ChangeHistory`, for each core that declares one | [Built-in checks](built-in-checks.md#ports-and-adapters) |
+| `continual-rust` | `crates/adapters/rust/` | `LanguageSyntax` for Rust, for each check core that declares one | [Built-in checks](built-in-checks.md#ports-and-adapters) |
+| `continual-context` | `crates/adapters/context/` | The execution context: the engine's `Timer` and the commit-messages core's `Patterns` | [Built-in checks](built-in-checks.md#ports-and-adapters) |
 
-The core grows the feature modules `workspace`, `pipeline`, `events`, `checks` and `gate`.
+A core that needs another core declares a driven port too, and a bridge answers it by calling
+the other core. A bridge depends on the two cores it joins and on nothing else:
+
+| Bridge | Path | Implements | By calling | Designed in |
+| --- | --- | --- | --- | --- |
+| `continual-engine-registry` | `crates/adapters/engine-registry/` | The engine's `CheckRunner` and the registry's `BaseEntries` | The registry and the engine | [Built-in checks](built-in-checks.md#bridges) |
+| `continual-registry-comments` | `crates/adapters/registry-comments/` | The registry's `Check` | The comments core | [Built-in checks](built-in-checks.md#bridges) |
+| `continual-registry-architecture` | `crates/adapters/registry-architecture/` | The registry's `Check` | The architecture core | [Built-in checks](built-in-checks.md#bridges) |
+| `continual-registry-guard` | `crates/adapters/registry-guard/` | The registry's `Check` | The guard core | [Built-in checks](built-in-checks.md#bridges) |
+| `continual-registry-commit-messages` | `crates/adapters/registry-commit-messages/` | The registry's `Check` | The commit-messages core | [Built-in checks](built-in-checks.md#bridges) |
+| `continual-registry-rust-workspace-lints` | `crates/adapters/registry-rust-workspace-lints/` | The registry's `Check` | The `rust-workspace-lints` core | [Built-in checks](built-in-checks.md#bridges) |
+| `continual-gate-engine` | `crates/adapters/gate-engine/` | The gate's `GateRules` | The engine | [Harness](harness.md#design) |
+
+One crate under `crates/adapters/` implements no port. `continual-shell-words`, in
+`crates/adapters/shell-words/`, splits a command line into words and shell operators, minding
+quotes. The `toml-config` adapter splits a step's `run` with it, through a coupling declared
+in `arch.toml`, and the harness adapter splits the command an agent wants to run
+([Pipeline](pipeline.md#commands), [Harness](harness.md#design)).
+
 `crates/continual` keeps the composition root and two driving adapters: `cli.rs` and
-`harness/claude.rs`. Every language adapter is compiled into the one binary
+`harness/claude.rs`. `main.rs` is the one place that lists the built-in checks: it builds
+each check core, wraps it in its bridge and hands the bridges to the registry. Every check
+and every language adapter is compiled into the one binary
 ([Distribution](distribution.md#decisions)).
 
-`arch.toml` classifies every crate as core, composition root, adapter or tooling, and lists
-the core's allowed external dependencies (none yet) and the couplings allowed between adapters
-(none yet). `cargo xtask arch` enforces it ([Checks](checks.md#cargo-xtask-checks)).
+`arch.toml` then names the directory that holds the cores, and gives each core an allow-list
+of its own ([Checks](checks.md#cargo-xtask-checks)).
 
 ### Repository layout
 
@@ -105,15 +148,33 @@ configuration.
 
 - **Rules are domain; tools and languages are technology.** What a check decides, how
   findings are reported, the order a pipeline runs in and when a gate blocks are core types.
-  Launching tools, reading files, git and each language's parser sit behind ports, so one core
-  enforces the same rules in every language and a new language is a new adapter. Rejected: a
-  core per language, and a lexer or parser inside the core.
-- **Crates by role, modules by feature inside the core** (D9, D10). A crate boundary is
+  Launching tools, reading files, git and each language's parser sit behind ports, so each
+  rule is written once for every language and a new language is a new adapter. Rejected: a
+  core per language, and a lexer or parser inside a core.
+- **Crates by role, modules by feature inside a core** (D9, D10). A crate boundary is
   something `cargo xtask arch` can check, while feature modules keep related code together.
+- **Several small cores, joined by bridges.** Each unit of logic with rules of its own is a
+  core: the engine, the check registry, each built-in check and the gate. A core is short
+  enough to read whole, its boundary is a crate, which the compiler and `cargo xtask arch`
+  hold, and it can be lifted out and used without the others. The price is the number of
+  crates, about twenty, built, versioned and published together. Rejected: one core with a
+  feature module for each unit, whose boundaries are module visibility that only review
+  holds and whose crate grows with every rule; and a core for each of the engine's feature
+  modules, since `workspace`, `pipeline` and `events` share one model, the validated graph,
+  and a boundary between them would only map that graph back and forth (H5).
+- **Cores share no crate.** Each core declares the types its ports speak, and a bridge maps
+  one core's types to the other's, so no core changes because another did (H4). A step's name
+  in the engine and a check's name in the registry follow the same rules and are separate
+  types. Rejected: a shared crate of common types such as findings, names and located values,
+  which every core would depend on and none could change alone.
+- **One bridge crate for each pair of cores.** A bridge can reach only the two cores it joins,
+  so a new check adds its core and its bridge and changes no other crate but the composition
+  root. Rejected: one crate that holds every check's bridge, which could reach every check
+  core at once.
 - **`CheckName` as the first value object.** The checks needed real logic to exercise:
-  tests, coverage and mutation testing. `CheckName` models the name a contributor types to run
-  one check, and the first pipeline feature may reshape or replace it. Rejected: proving the
-  checks with fixtures only.
+  tests, coverage and mutation testing. `CheckName` models the name of one check, so it
+  moves with its crate into the registry core. Rejected: proving the checks with fixtures
+  only.
 - **One binary.** Continual runs from a terminal, a git hook, a CI job or an agent harness, and
   each of those can call the `continual` binary, so there is one composition root. A second
   deployable gets its own when it exists.
@@ -125,12 +186,25 @@ configuration.
   `std::process` for tools and git, and `ra-ap-rustc_lexer`, `syn` and `toml` for Rust. What
   those do not cover is added by the task that first needs it, with its reason (G8): signalling
   a process group, Windows job objects and catching Ctrl-C in the adapters and the composition
-  root, where `unsafe` code is forbidden, and regular expressions and globs in the core.
+  root, where `unsafe` code is forbidden; a runtime that executes a run's futures, in the
+  composition root; and regular expressions in the execution context, with globs beside them
+  if matching them needs a library.
+- **Cores get libraries through the execution context.** A core that needs what a library
+  does, as the commit-messages core needs regular expressions, declares a port for it, and
+  the `context` adapter answers. Every core's allow-list stays empty, and the one object the
+  composition root builds for a run is where the next such need goes
+  ([Built-in checks](built-in-checks.md#decisions)). Rejected: a crate that every core
+  depends on and receives when it runs, which cores would share (H4).
+- **One tokenizer of Continual's own splits command lines.** A step's `run` and the command
+  an agent wants to run are each one line of text whose quotes must mean the same thing, so
+  one small crate reads both: words, quoted text kept together, and shell operators as
+  tokens of their own. The configuration adapter rejects an operator, and the harness
+  adapter cuts segments at them. The crate sits with the adapters, since shell syntax is a
+  format translated at the edge (A1), and `toml-config` reaches it through a declared
+  coupling (B4). Rejected: a library such as `shlex` for `run`, which knows no operators, so
+  the harness adapter would still need code of its own and an `&&` in a `run` would reach
+  the tool as an argument; and the same splitting written in each adapter, which gives
+  quotes two readers that can drift apart.
 - **clap with the derive feature**, since every future command needs argument parsing.
 - **Smoke tests run the built binary** through `env!("CARGO_BIN_EXE_continual")` and
   `std::process::Command`, so they need no extra test dependency.
-
-## Open questions
-
-- Which shell-word splitting the `toml-config` adapter and the harness adapter use, decided
-  with the feature that first needs it.

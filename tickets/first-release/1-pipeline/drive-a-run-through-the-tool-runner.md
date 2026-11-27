@@ -14,13 +14,14 @@ status: pending
 
 ## Goal
 
-Add the `ToolRunner` port and the use case that drives a `Run` through it: start every ready
-tool entry up to the job limit, take each output line and each completion as the runner hands
-it back, and repeat until nothing is running or ready, stopping every tool when asked.
+Add the `ToolRunner` port and the use case that drives a `Run` through it as futures: one
+future for each running tool entry, up to the job limit, each handing over its output lines
+as they are written and ending with its outcome, until nothing is running or ready, stopping
+every tool when asked.
 
 ## Design
 
-The use-case loop in [Pipeline: core](../../../docs/pipeline.md#core) and the `ToolRunner` row in
+The use-case loop in [Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core) and the `ToolRunner` row in
 [ports and adapters](../../../docs/pipeline.md#ports-and-adapters).
 
 ## Behaviours to test
@@ -28,6 +29,9 @@ The use-case loop in [Pipeline: core](../../../docs/pipeline.md#core) and the `T
 - Independent ready entries start together, never more than the job limit at once across
   every pipeline of the run; when there are more than free jobs, they start in the order the
   `Run` gives them.
+- With a job limit of 1, entries run one after another in that order.
+- Two paths of one pipeline advance on their own: a slow entry on one does not hold up the
+  entries of the other.
 - Each step's command, directory and time limit reach the runner as the configuration gives
   them.
 - Output lines are taken as the runner hands them back, each with its entry and stream, while
@@ -39,5 +43,6 @@ The use-case loop in [Pipeline: core](../../../docs/pipeline.md#core) and the `T
 
 ## Done when
 
-- The contract suite and the fake live in the core's `testing` module.
-- The loop is tested with the fake alone.
+- The contract suite and the fake live in the engine core's `testing` module.
+- The use case is tested with the fake alone.
+- The engine core uses the language's futures and gains no dependency for them (B1).

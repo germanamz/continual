@@ -4,6 +4,7 @@ title: Read Rust crates and their dependencies
 blocks:
   - tickets/first-release/2-built-in-checks/read-rust-imports
   - tickets/first-release/2-built-in-checks/check-that-rust-crates-inherit-the-workspace-lints
+  - tickets/first-release/2-built-in-checks/join-the-architecture-check-to-the-registry
 parent: tickets/first-release/2-built-in-checks/story
 points: 3
 priority: medium
@@ -14,7 +15,8 @@ status: pending
 
 ## Goal
 
-Implement the manifest operation of `LanguageSyntax` in `continual-rust`: read each crate and
+Implement the manifest operation of the architecture core's `LanguageSyntax` in
+`continual-rust`: read each crate and
 its dependencies from `Cargo.toml` text, so the architecture check works on Rust without
 running `cargo metadata`.
 
@@ -25,12 +27,13 @@ The `rust` notes and the manifest decision in
 
 ## Behaviours to test
 
-- The `LanguageSyntax` contract suite for manifests passes against the adapter.
+- The architecture core's `LanguageSyntax` contract suite for manifests passes against the
+  adapter.
 - Normal, dev and build dependencies are read, target-specific ones included.
 - A dependency inherited with `workspace = true` resolves through the workspace manifest.
 - A path dependency is told apart from an external one.
-- This repository's `arch.toml` rules, written as the check's settings, report the same
-  violations as `cargo xtask arch` on its fixtures.
+- This repository's `arch.toml` rules, built as the architecture core's settings, report the
+  same violations as `cargo xtask arch` on its fixtures.
 
 ## Done when
 

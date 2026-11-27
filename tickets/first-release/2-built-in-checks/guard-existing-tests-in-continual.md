@@ -14,8 +14,8 @@ status: pending
 
 ## Goal
 
-Add the guard's test rules in the core, over the test items a language adapter reports with
-their token fingerprints, with the tests operation added to `LanguageSyntax`.
+Add the test rules to the guard core, over the test items a language adapter reports with
+their token fingerprints, and its `LanguageSyntax` port with the tests operation.
 
 ## Design
 
@@ -34,4 +34,4 @@ their token fingerprints, with the tests operation added to `LanguageSyntax`.
 
 ## Done when
 
-- The rules are tested in the core with the fake, without knowing any language.
+- The rules are tested in the guard core with the fake, without knowing any language.

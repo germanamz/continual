@@ -14,8 +14,8 @@ status: pending
 
 ## Goal
 
-Implement `ToolRunner` in the `continual-process` adapter: launch several tools at once and
-hand back each line they write and each one's outcome as it happens.
+Implement `ToolRunner` in the `continual-process` adapter: launch several tools at once, each
+as a future that hands over the lines its tool writes and ends with the tool's outcome.
 
 ## Design
 

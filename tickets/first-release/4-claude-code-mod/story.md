@@ -31,5 +31,6 @@ Each child ticket lists the behaviours it adds. List the children with the query
 ## Done when
 
 - Every child ticket is completed.
-- `GateState` has a contract suite, a fake and the `continual-session-state` adapter.
+- `GateRules` has a contract suite, a fake and the `continual-gate-engine` bridge, and the
+  gate keeps no state between hook calls.
 - The design documents describe the change, and its planned markers are gone.

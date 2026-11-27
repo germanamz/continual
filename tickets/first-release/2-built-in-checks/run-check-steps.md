@@ -7,6 +7,7 @@ blocks:
   - tickets/first-release/2-built-in-checks/split-commit-messages-into-parts
   - tickets/first-release/5-packages/route-files-to-their-packages
   - tickets/first-release/3-events/give-check-steps-an-events-files-and-message
+  - tickets/first-release/2-built-in-checks/limit-a-check-steps-time
 parent: tickets/first-release/2-built-in-checks/story
 points: 3
 priority: high
@@ -17,29 +18,43 @@ status: pending
 
 ## Goal
 
-Let a step run built-in checks: read `checks` entries with their inline settings, run them in
-list order within the pipeline, and print their findings as `path:line: message`, starting
-with the comments check.
+Let a step run built-in checks without the engine knowing any of them: the engine reads
+`checks` entries with their inline settings, asks `CheckRunner` to read them when the
+workspace loads and to run them within the pipeline, and prints the finding lines it gets
+back. The composition root wires the first check, so `continual run` runs a `comments` check
+step.
 
 ## Design
 
-[Built-in checks: check steps](../../../docs/built-in-checks.md#check-steps) and
-[core](../../../docs/built-in-checks.md#core).
+[Built-in checks: check steps](../../../docs/built-in-checks.md#check-steps), the `CheckRunner`
+row and the `toml-config` note in
+[Pipeline: ports and adapters](../../../docs/pipeline.md#ports-and-adapters),
+[Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core) and
+[composition root](../../../docs/pipeline.md#composition-root).
 
 ## Behaviours to test
 
-- A check step runs every check in list order, even after one reports findings, and fails
-  when any check reports findings.
-- A check that cannot run makes its step could-not-run (exit code 2), and never reports "no
-  findings" instead.
-- A per-file check inspects every file of its package that git tracks or would track.
-- An unknown check name, or an unknown setting of a check, is a configuration error at its
-  line.
-- Findings print with paths relative to the repository root.
-- The real binary runs a `comments` check step on a fixture repository.
+- A check step's entries reach `CheckRunner` in list order, with their package, their
+  settings as located values and the run's inputs.
+- The finding lines it hands back are printed with paths relative to the repository root, and
+  the step fails when its outcome says a check reported findings.
+- An outcome that says a check could not run makes the step could-not-run (exit code 2).
+- A check step runs as a future beside the tool entries and counts as one job: while its
+  checks are still running, the lines and outcomes of the tools beside it keep arriving, and
+  a request to stop is honoured.
+- An entry that `CheckRunner` rejects, for an unknown check or a setting its check does not
+  have, is a configuration error at its line, before anything runs.
+- `continual-toml-config` passes a check entry's settings on as located values, and judges
+  none of them.
+- `--base`, `--range`, `--title`, `--body`, `--ci` and `--labels` are parsed once for every
+  command that runs checks, with `origin/main` as the base when none is given, and reach
+  `CheckRunner` as the run's inputs.
+- The real binary runs a `comments` check step on a fixture repository, and ends with exit
+  code 2 on a check step that names no built-in check.
 
 ## Done when
 
-- The composition root wires `continual-rust` and `continual-git` into check steps.
-- The open question on how check entries run beside tools in docs/pipeline.md is decided and
-  removed.
+- The rules are tested in the engine core with the `CheckRunner` fake, and the engine holds
+  no check and no registry code.
+- The composition root builds `continual-rust`, `continual-git`, the comments core and its
+  bridge, the registry and the `engine-registry` bridge, in the order B5 gives.

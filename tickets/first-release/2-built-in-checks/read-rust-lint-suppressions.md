@@ -11,8 +11,8 @@ status: pending
 
 ## Goal
 
-Implement the suppressions operation of `LanguageSyntax` in `continual-rust`, so the guard's
-lint rules work on Rust as the `xtask` guard does today.
+Implement the suppressions operation of the guard's `LanguageSyntax` in `continual-rust`, so
+the guard's lint rules work on Rust as the `xtask` guard does today.
 
 ## Design
 
@@ -20,7 +20,7 @@ The `rust` notes in [Built-in checks: ports and adapters](../../../docs/built-in
 
 ## Behaviours to test
 
-- The `LanguageSyntax` contract suite for suppressions passes against the adapter.
+- The guard's `LanguageSyntax` contract suite for suppressions passes against the adapter.
 - Every `#[expect]` attribute is reported with its line.
 - A change to `[workspace.lints]`, and a crate `[lints]` table that becomes anything but
   `workspace = true`, are reported as loosened lint configuration.

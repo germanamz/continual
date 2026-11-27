@@ -14,7 +14,7 @@ status: pending
 
 Make `continual run <pipeline>... [--jobs <n>] [--unpinned]` work end to end on a
 single-package repository, with the composition root wiring the config, process and terminal
-adapters into the core.
+adapters into the engine core.
 
 ## Design
 
@@ -29,11 +29,13 @@ adapters into the core.
   table says.
 - `continual run` with an unknown pipeline exits with code 2 and lists the pipelines that
   exist.
-- `--jobs` defaults to the number of CPUs, and `--jobs 1` runs one entry at a time.
+- The job limit is `[continual] jobs`, `--jobs` overrides it for one invocation, and without
+  either it is the number of CPUs. A limit of 1 runs one entry at a time.
 - A missing tool prints the step's `install` command, or says it has none.
 - `--unpinned` runs a binary whose version is not the pinned one.
 - Existing: `continual --help` and `--version` behave as before.
 
 ## Done when
 
-- The composition root builds driven adapters, then the core, then the CLI (B5).
+- The composition root builds driven adapters, then the engine core, then the CLI (B5), and
+  the runtime that executes the run's futures, with any new dependency added per G8.

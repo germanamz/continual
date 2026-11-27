@@ -12,8 +12,8 @@ status: pending
 
 ## Goal
 
-Implement the tests operation of `LanguageSyntax` in `continual-rust` with `syn`, so the
-guard's test rules work on Rust as the `xtask` guard does today.
+Implement the tests operation of the guard's `LanguageSyntax` in `continual-rust` with `syn`,
+so the guard's test rules work on Rust as the `xtask` guard does today.
 
 ## Design
 
@@ -21,7 +21,7 @@ The `rust` notes in [Built-in checks: ports and adapters](../../../docs/built-in
 
 ## Behaviours to test
 
-- The `LanguageSyntax` contract suite for tests passes against the adapter.
+- The guard's `LanguageSyntax` contract suite for tests passes against the adapter.
 - `#[test]` functions are reported with their names, attributes (`#[ignore]`,
   `#[should_panic]`) and a token fingerprint that reformatting does not change.
 - Helpers and attributes in `tests/` files and `#[cfg(test)]` modules are reported.
