@@ -1081,3 +1081,19 @@ fn the_workspace_check_holds_a_library_crate_to_the_dependency_rules() {
         "{found:?}"
     );
 }
+
+#[test]
+fn a_manifests_finding_is_printed_with_forward_slashes_on_every_platform() {
+    let mut packages = base_packages();
+    packages[1].manifest_dir = PathBuf::from("crates\\continual");
+    packages[1].inherits_workspace_lints = false;
+    let found: Vec<String> = check_graph(&config(), &WorkspaceGraph { packages })
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(
+        found[0].starts_with("crates/continual/Cargo.toml:1: "),
+        "{found:?}"
+    );
+}

@@ -346,7 +346,7 @@ pub fn check_graph(config: &ArchConfig, graph: &WorkspaceGraph) -> Vec<Finding> 
         .collect();
     let mut findings = config_findings(config, graph, &roles);
     for package in &graph.packages {
-        let path = package.manifest_dir.join("Cargo.toml");
+        let path = manifest_path(&package.manifest_dir);
         let messages = package_messages(config, package, &roles);
         findings.extend(messages.into_iter().map(|message| Finding {
             path: path.clone(),
@@ -355,6 +355,13 @@ pub fn check_graph(config: &ArchConfig, graph: &WorkspaceGraph) -> Vec<Finding> 
         }));
     }
     findings
+}
+
+/// The manifest in `manifest_dir`, written with `/` on every platform, so a finding
+/// reads the same wherever the check runs.
+fn manifest_path(manifest_dir: &Path) -> PathBuf {
+    let path = manifest_dir.join("Cargo.toml");
+    PathBuf::from(path.to_string_lossy().replace('\\', "/"))
 }
 
 fn package_messages(
