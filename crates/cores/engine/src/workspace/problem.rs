@@ -2,9 +2,7 @@
 
 use core::fmt;
 
-use continual_vocabulary::Location;
-
-use super::step_name::StepNameError;
+use continual_vocabulary::{Location, NameError};
 
 /// One thing wrong with a configuration, at the place the configuration input gave
 /// the item that is wrong.
@@ -30,12 +28,12 @@ impl core::error::Error for Problem {}
 /// What can be wrong with a configuration.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ProblemKind {
-    /// A step's name breaks the rules of a step name.
+    /// A step's name breaks the name rule.
     InvalidStepName {
         /// The name as written.
         name: String,
         /// The rule it breaks, at its first offending character.
-        error: StepNameError,
+        error: NameError,
     },
     /// A step has both `run` and `checks`, and a step has exactly one of them.
     BothRunAndChecks {

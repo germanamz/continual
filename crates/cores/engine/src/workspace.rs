@@ -13,7 +13,7 @@ pub use continual_vocabulary::{Located, Location};
 pub use input::{ConfigInput, StepInput};
 pub use problem::{Problem, ProblemKind};
 pub use step::{CheckEntry, Command, Step, StepKind};
-pub use step_name::{StepName, StepNameError};
+pub use step_name::StepName;
 
 use step::positive_timeout;
 

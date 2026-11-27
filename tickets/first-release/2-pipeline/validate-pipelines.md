@@ -27,12 +27,14 @@ The `workspace` module in [Pipeline: the engine core](../../../docs/pipeline.md#
 
 ## Carried over
 
-- The engine holds the name rule once, in `StepName::parse`
-  (`crates/cores/engine/src/workspace/step_name.rs`). A pipeline name follows the same rule,
-  so it shares that definition and does not copy it (Q16). Once
-  [Build step names on a shared name rule](../1-library-crates/build-step-names-on-a-shared-name-rule.md)
-  is merged, that definition is the library crate's `Name`, and a pipeline name is built on
-  it as a step name is.
+- The name rule is the library crate's `Name` (`crates/libraries/vocabulary/src/name.rs`),
+  and the engine holds no copy of it. A pipeline name is a type of the engine's own built on
+  `Name`, as `StepName` is in `crates/cores/engine/src/workspace/step_name.rs` (Q16).
+- An invalid name is reported with the library crate's `NameError`, whose message names no
+  kind of name, so the problem says it is a pipeline name, as
+  `ProblemKind::InvalidStepName` says `invalid step name "Fmt": …` for a step. The engine
+  does not re-export `NameError`: its tests name `continual_vocabulary::NameError`
+  ([Workspace: open questions](../../../docs/workspace.md#open-questions)).
 - `Workspace::build` reports `jobs`, the configuration's `timeout`, then the steps in the order
   of their names. Where the problems of pipelines come in that order is this task's to say,
   in the paragraph on configuration input in

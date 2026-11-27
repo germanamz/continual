@@ -5,7 +5,7 @@ blocks: tickets/first-release/1-library-crates/build-check-names-on-the-shared-n
 parent: tickets/first-release/1-library-crates/story
 points: 2
 priority: medium
-status: pending
+status: completed
 ---
 
 # Build step names on a shared name rule
