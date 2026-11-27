@@ -1,8 +1,8 @@
 [workspace]
 name = "continual"
 # Gitignore-style patterns. Index the knowledge documents (VISION.md, CONVENTIONS.md,
-# docs/) and the tickets (tickets/); skip build output, tooling, and the entry files
-# agents load directly.
+# MEMORY.md, docs/) and the tickets (tickets/); skip build output, tooling, and the entry
+# files agents load directly.
 ignore = [
     "target/",
     "mutants.out/",
@@ -86,9 +86,10 @@ document-prefix = "search_document: "
 [query]
 lexical-weight = 0.5
 
-# Every session starts with the product picture and the open tickets.
+# Every session starts with the product picture, what earlier sessions handed on, and the
+# open tickets.
 [context]
-pinned    = ["VISION"]
+pinned    = ["VISION", "MEMORY"]
 include   = ["open-tickets"]
 max-bytes = 9500
 

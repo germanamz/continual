@@ -110,6 +110,7 @@ of its own ([Checks](checks.md#cargo-xtask-checks)).
 VISION.md                  what Continual does for the people and agents using it
 README.md                  what it is, setup, commands, links
 CONVENTIONS.md             the rules every contributor follows
+MEMORY.md                  what one session hands to the next
 AGENTS.md, CLAUDE.md       the agents' short form of CONVENTIONS.md
 docs/                      design documents, one per area (this file is one)
 tickets/                   planned work, as Tusk tickets

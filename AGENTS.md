@@ -86,6 +86,8 @@ fixes for PR comments.
   `> Planned: [title](../tickets/<path>.md)` until the PR that builds it (K4–K7).
 - A task is 1, 2 or 3 Fibonacci points, one PR, workable on its own; work of 5 or more is a
   story split into tasks (K9).
+- Each task is built in a session of its own. What the next session needs goes to its home,
+  or to `MEMORY.md` when it has none: short, rewritten whole, never a session log (K8).
 
 ## Stop and report when
 

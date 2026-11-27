@@ -30,5 +30,7 @@ in `docs/README.md`, and the ticket template and Tusk calls in `tickets/README.m
   the PR that finishes it. Delete dropped tickets with their markers (K7).
 - Link to a fact's home instead of repeating it: `VISION.md`, `CONVENTIONS.md`, `docs/`, doc
   comments, `tickets/` (K8).
+- What a later session needs and no home holds goes in `MEMORY.md`, kept short and rewritten
+  whole, with no log of a session (K8).
 - Run `tusk_doctor` after changing these files. It reports misplaced tickets, specs or plans
   under `docs/`, links to files that are gone, and tickets whose points break K9.

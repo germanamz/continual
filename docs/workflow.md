@@ -87,11 +87,18 @@ The full rule is R1. In practice:
 | `AGENTS.md`, `CLAUDE.md`, `.claude/rules/`, the `placing-a-change` skill | Short extracts of `CONVENTIONS.md` for agents. |
 | `docs/` | How each area is built and why, one design document per area. |
 | `tickets/` | Planned work. |
+| `MEMORY.md` | What one session must hand to the next and no other home holds. |
 | Doc comments | Each item's contract: inputs, outputs, errors, invariants. |
 | `README.md` | Setup and commands. |
 | Git history and pull requests | What changed, when and why. |
 
 A fact has one home, and every other place links to it (K8).
+
+Each task is built in a session of its own, and a session's context ends with it. So a session
+leaves nothing the next one needs in its own context: what it learned goes to its home above,
+and what has no home goes to `MEMORY.md`, a short note that the Tusk digest hands to every
+session. The note is rewritten whole, like a design document: the part that changed is
+rewritten, what no longer holds is deleted, and it never grows into a log of sessions.
 
 ### Design documents
 
@@ -153,7 +160,7 @@ every commit and push then asks ([Harness](harness.md#the-review-gate)).
 ### Tusk
 
 - `tusk.toml` is the committed manifest. The index in `.tusk/` is not committed.
-- Tusk indexes `VISION.md`, `CONVENTIONS.md`, `docs/` and `tickets/`. It skips build output,
+- Tusk indexes `VISION.md`, `CONVENTIONS.md`, `MEMORY.md`, `docs/` and `tickets/`. It skips build output,
   tooling and the entry files agents load directly (`AGENTS.md`, `CLAUDE.md` and every
   `README.md`).
 - The `vault` pack makes untyped markdown a `note`. The `kanban` pack adds the `ticket` type,
@@ -167,7 +174,8 @@ every commit and push then asks ([Harness](harness.md#the-review-gate)).
 - Semantic queries use Ollama with `nomic-embed-text`, with the query and document prefixes and
   the lexical weight of 0.5 taken from Tusk's own measured settings. Without Ollama, structural
   queries still work and semantic ones fail.
-- The session digest pins `VISION.md` and includes the `open-tickets` alias, within 9500 bytes.
+- The session digest pins `VISION.md` and `MEMORY.md` and includes the `open-tickets` alias,
+  within 9500 bytes.
 - `tusk claude install` writes the Tusk mod to `.claude/skills/tusk/`: the MCP server, a
   session-start hook that injects the digest, and an after-edit hook that lists the pages
   naming an edited file. It also approves the MCP server in `.claude/settings.local.json`.
@@ -209,6 +217,11 @@ and follow-ups. Rules R3 to R5 govern titles, descriptions and attribution.
   stories, which drift from the sum of their tasks.
 - **The review gate lives in hooks as well as in prose**, so it holds when an agent forgets the
   rule. Waves keep it to one question per contributor message.
+- **What sessions hand on lives in the vault, in one short note.** Each task gets a session of
+  its own, so what a session learned has to outlive it in a file that every contributor and
+  every agent reads, and the digest delivers that file at the start of each session.
+  Rejected: an agent's private memory, which other contributors and other harnesses never
+  see; and a log with an entry for each session, which grows until nobody reads it.
 - **The stop hook does not run the guard.** A Stop hook can show output only by blocking, and
   guard findings must never block. The guard runs in `cargo xtask ci`, pre-push and CI.
 - **The research doc is linked, not copied**, so there is one live version. `CONVENTIONS.md`
