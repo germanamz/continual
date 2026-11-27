@@ -39,6 +39,11 @@ uses the same records and no bridge maps them.
   role, so the table arrives in the same change as the crate, with a comment like the one
   on `[cores]`. The paragraph on `arch.toml` under "Crates" in `docs/workspace.md` then names
   the library role and its directory beside the others.
+- `cargo xtask guard` reports every file under `crates/libraries/` as a gate file, so each
+  file of the new crate is a guard finding to list for the contributor. The guard takes the
+  directory from its own list in `xtask/src/guard/protected.rs` and not from `arch.toml`, so
+  the `[libraries]` table names that same directory
+  ([Checks: library crates](../../../docs/checks.md#library-crates)).
 
 ## Behaviours to test
 

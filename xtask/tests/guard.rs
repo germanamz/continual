@@ -582,3 +582,56 @@ fn ordinary_modules_are_not_test_code() {
         .replace("        1", "        2");
     assert_eq!(changes(base, Some(&current)), none());
 }
+
+const LIBRARY_FILE: &str = "crates/libraries/vocabulary/src/location.rs";
+
+#[test]
+fn every_file_of_a_library_crate_is_a_gate_file() {
+    for path in [
+        LIBRARY_FILE,
+        "crates/libraries/vocabulary/Cargo.toml",
+        "crates/libraries/vocabulary/README.md",
+        "crates\\libraries\\vocabulary\\src\\lib.rs",
+    ] {
+        assert!(is_protected(path), "{path} should be protected");
+    }
+}
+
+#[test]
+fn adding_changing_or_deleting_a_library_crate_file_is_reported() {
+    let record = "pub struct Location;\n";
+    let grown = "pub struct Location;\npub struct Located;\n";
+    for (status, base, current, message) in [
+        (ChangeStatus::Added, None, Some(record), "added"),
+        (
+            ChangeStatus::Modified,
+            Some(record),
+            Some(grown),
+            "modified",
+        ),
+        (ChangeStatus::Deleted, Some(record), None, "deleted"),
+    ] {
+        let file = changed(LIBRARY_FILE, status);
+        assert_eq!(
+            messages(&file, base, current),
+            [format!("protected file {message}")]
+        );
+    }
+}
+
+#[test]
+fn a_core_or_an_adapter_is_reported_only_for_what_the_guard_reports_everywhere() {
+    let changed_test = BASE.replace("1 + 1, 2", "1 + 1, 3");
+    for directory in ["crates/cores/engine", "crates/adapters/git"] {
+        let source = changed(&format!("{directory}/src/lib.rs"), ChangeStatus::Modified);
+        assert_eq!(
+            messages(&source, Some("fn a() {}\n"), Some("fn b() {}\n")),
+            Vec::<String>::new()
+        );
+        let test_file = changed(&format!("{directory}/tests/t.rs"), ChangeStatus::Modified);
+        assert_eq!(
+            messages(&test_file, Some(BASE), Some(&changed_test)),
+            ["test adds changed"]
+        );
+    }
+}

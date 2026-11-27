@@ -95,10 +95,11 @@ This document describes how the checks work and why they are built this way.
   `#[cfg(test)]` modules it also reports changed helpers and file or module attributes. It
   reports changes to gate files (the list is in `xtask/src/guard/protected.rs`): the check
   configuration, `.cargo/`, `.github/`, `xtask/`, `.claude/settings.json`, `.claude/hooks/`,
-  `.claude/rules/`, `.claude/skills/` and the rule texts `CONVENTIONS.md`, `AGENTS.md` and
-  `CLAUDE.md`. It also reports a change to `[workspace.lints]`, a crate `[lints]` table that
-  becomes anything but `workspace = true`, and every new `#[expect]` attribute. Adding a test
-  is never reported. A source file it cannot parse is reported, not skipped.
+  `.claude/rules/`, `.claude/skills/`, the rule texts `CONVENTIONS.md`, `AGENTS.md` and
+  `CLAUDE.md`, and every file of a [library crate](#library-crates), under
+  `crates/libraries/`. It also reports a change to `[workspace.lints]`, a crate `[lints]`
+  table that becomes anything but `workspace = true`, and every new `#[expect]` attribute.
+  Adding a test is never reported. A source file it cannot parse is reported, not skipped.
 - **`coverage`** runs `cargo llvm-cov nextest`, writes `target/coverage-summary.json` and
   requires workspace lines and functions at 90% or more and the lines of each core at 95% or
   more. The cores are the ones the arch check finds, from `arch.toml` and `cargo metadata`, so
@@ -139,10 +140,10 @@ what keeps the role from becoming a way round the boundaries between cores.
 - The source scan also reports a `trait` declared in a library crate, so no port can live in
   one (P7).
 
-> Planned: [Guard changes to library crates](../tickets/first-release/1-library-crates/guard-changes-to-library-crates.md)
-
-- **`guard`** reports every change under `crates/libraries/` as a change to a gate file, so
-  CI fails until a contributor adds the approval label (H8).
+- **`guard`** reports every change under `crates/libraries/` as a change to a gate file: a
+  file added, modified or deleted, whatever it holds. So CI fails until a contributor adds
+  the approval label (H8). The guard takes the directory from its own list of gate files and
+  not from `arch.toml`.
 
 > Planned: [Hold library crates to the cores' coverage](../tickets/first-release/1-library-crates/hold-library-crates-to-the-cores-coverage.md)
 

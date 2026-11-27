@@ -26,17 +26,18 @@ const PROTECTED_FILES: [&str; 11] = [
 ];
 
 /// Directories whose every file is protected.
-const PROTECTED_DIRECTORIES: [&str; 6] = [
+const PROTECTED_DIRECTORIES: [&str; 7] = [
     ".cargo/",
     ".github/",
     ".claude/hooks/",
     ".claude/rules/",
     ".claude/skills/",
+    "crates/libraries/",
     "xtask/",
 ];
 
 /// Whether `path` (relative to the repository root) holds gate configuration, gate
-/// code or rule text.
+/// code, rule text or a library crate's file.
 #[must_use]
 pub fn is_protected(path: &str) -> bool {
     let path = path.replace('\\', "/");

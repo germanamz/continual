@@ -5,7 +5,7 @@ blocks: tickets/first-release/1-library-crates/share-locations-in-the-first-libr
 parent: tickets/first-release/1-library-crates/story
 points: 1
 priority: high
-status: pending
+status: completed
 ---
 
 # Guard changes to library crates

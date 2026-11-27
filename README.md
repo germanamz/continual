@@ -50,8 +50,8 @@ Read [CONVENTIONS.md](CONVENTIONS.md). Agents follow [AGENTS.md](AGENTS.md), its
 The design of each area is in [docs/](docs/README.md), and planned work is tracked as Tusk
 tickets in [tickets/](tickets/README.md).
 Commits follow Conventional Commits, and pull requests fill in
-`.github/pull_request_template.md`. When a pull request changes existing tests or gate
-configuration, CI waits for a contributor to add the `guard-approved` label.
+`.github/pull_request_template.md`. When a pull request changes existing tests, gate
+configuration or a library crate, CI waits for a contributor to add the `guard-approved` label.
 
 Recommended repository settings, for a contributor with admin access:
 
