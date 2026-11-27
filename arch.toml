@@ -8,6 +8,7 @@ directory = "crates/cores"
 # Each core may depend only on the external crates on its own list, each with a reason:
 # <core> = [{ name = "…", reason = "…" }]. Every core has a list, even an empty one.
 [cores.allowed-dependencies]
+continual-engine = []
 continual-registry = []
 
 # One composition root per deployable: the only crates that wire adapters.

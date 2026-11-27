@@ -5,7 +5,7 @@ blocks: tickets/first-release/1-pipeline/validate-pipelines
 parent: tickets/first-release/1-pipeline/story
 points: 2
 priority: high
-status: pending
+status: completed
 ---
 
 # Validate step definitions in the engine

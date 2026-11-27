@@ -26,7 +26,7 @@ anyone who cannot open the doc.
 
 | Term | Meaning in Continual |
 | --- | --- |
-| Core | A crate that holds one unit of Continual's rules and no technology: no I/O, clock, environment or randomness. No core depends on another (H1). Today there is one, `crates/cores/registry`; the planned cores are in section 3. |
+| Core | A crate that holds one unit of Continual's rules and no technology: no I/O, clock, environment or randomness. No core depends on another (H1). Today there are two, `crates/cores/engine` and `crates/cores/registry`; the planned cores are in section 3. |
 | Port | A conversation between a core and one actor outside it, named for its purpose in that core's domain language. |
 | Driven port | What a core needs from outside, such as running a tool, reading the repository's files or asking another core. A trait declared in the core that needs it and implemented by an adapter. |
 | Driving port | What the outside asks a core to do. A concrete core type or function that driving adapters call directly. |
@@ -76,9 +76,10 @@ reading files and configuration, asking git and parsing each language's source.
 The rules are split into cores, each one unit of logic small enough to read and test whole
 (H1). No core depends on another. A core that needs another states the need as a driven port
 in its own words, and a bridge implements that port by calling the other core (H2 to H4).
-Today the one core is `crates/cores/registry`, which holds the check name. The rest of it and
-the other cores below are planned, and [Workspace](docs/workspace.md#planned-crates) lists
-their crates.
+Today there are two: `crates/cores/registry`, which holds the check name, and
+`crates/cores/engine`, which holds a workspace's step definitions. The rest of both and the
+other cores below are planned, and [Workspace](docs/workspace.md#planned-crates) lists their
+crates.
 
 | Core | Holds |
 | --- | --- |
@@ -117,8 +118,8 @@ Each port's operations are described in the design document of its area:
 Crates by role:
 
 - `crates/cores/<name>`: the cores. Every crate there is a core, with an allow-list of its
-  own in `arch.toml`. `crates/cores/registry` is the one core so far, and the others are
-  planned. Modules are organised by feature inside a core.
+  own in `arch.toml`. `crates/cores/engine` and `crates/cores/registry` are the cores so far,
+  and the others are planned. Modules are organised by feature inside a core.
 - `crates/continual`: the composition root, one per deployable.
 - `crates/adapters/<name>`: adapters, bridges among them (none yet).
 - `xtask`: repository tooling. Product crates never depend on it.
@@ -225,10 +226,11 @@ Crates by role:
 | K3 | A change that alters behaviour or design updates the design documents it affects in the same PR, so `docs/` matches the code. A new area gets its own document and a row in `docs/README.md`. | A | review; PR template |
 | K4 | Planning a feature means writing its design into the design documents and its work into tickets, reviewed like any change. A part designed but not built yet starts with `> Planned: [<ticket title>](../tickets/<path>.md)`. The PR that builds it removes the marker. | A | review; `tusk doctor` (`path-missing`) |
 | K5 | Planned work is a Tusk ticket under `tickets/`. A task is named for its outcome in kebab case and lives in its story's folder; a story or an epic is `story.md` or `epic.md` in a folder of its own, named for its area, with stories numbered in build order inside their epic. One task is one PR. Larger work is a parent ticket whose children name it with `parent`, and `blocks` orders tickets that depend on each other. | A | `tusk doctor` (`ticket-location`, `tickets-folder`) |
-| K6 | A ticket states its goal, links to the design-document sections that hold its design, lists the behaviours to test (T2) and says when it is done. It does not restate the design. | J | review |
+| K6 | A ticket states its goal, links to the design-document sections that hold its design, holds what earlier tasks carried over to it (K10), lists the behaviours to test (T2) and says when it is done. It does not restate the design. | J | review |
 | K7 | A ticket starts `pending`, becomes `active` when work starts, and becomes `completed` in the PR that finishes it. Change the status through Tusk, which checks each move. Work a PR leaves for later becomes a ticket listed under "Follow-ups". Dropped work is deleted with its planned markers. | A | Tusk workflow; review; PR template |
 | K8 | Each fact has one home: what Continual does for its users in `VISION.md`, how every change is made in `CONVENTIONS.md`, how each area is built in `docs/`, an item's contract in its doc comment, the planned work in `tickets/`. Link to the home instead of repeating it. Each task is built in a session of its own, so whatever a later session needs is written to its home, or to `MEMORY.md` when it has none. That note stays short and whole: rewrite what changed, delete what no longer holds, and keep no log of a session. | J | review |
 | K9 | Estimate work in Fibonacci points before it becomes tickets. Work of 1, 2 or 3 points is a task, which carries its `points`. Work of 5 or more is a story: a parent ticket split into tasks of 1, 2 or 3 points, with no points of its own, so its size is the sum of its tasks. An epic groups stories into a milestone. Each task is workable on its own: it starts from what is merged, needs no other open ticket's code, and its PR meets the definition of done by itself. | A | `tusk doctor` (`task-size`, `parent-points`); review |
+| K10 | Track what comes up while a task is built: a nuance the design does not spell out, or something it leaves ambiguous. Never leave it in the session or only in the pull request. What an open ticket will meet goes into that ticket, under "Carried over", in the same PR. What the design leaves undecided also goes under "Open questions" in the area's design document, and the ticket links to it there. Work it calls for becomes a ticket (K7). Tell the contributor of each when the change is ready. What the task cannot finish without is a stop-and-report instead (G7). | A | review; PR template |
 
 ### Errors (E)
 

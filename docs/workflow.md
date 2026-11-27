@@ -38,8 +38,9 @@ The rules are in [CONVENTIONS.md](../CONVENTIONS.md): the design-document and ti
    stops (the review gate).
 4. **Pull request.** On the contributor's instruction, the change is committed, pushed and
    opened as a pull request. By then the design documents describe the change, the markers it
-   fulfils are gone, its tickets are `completed`, and any work left for later is a new ticket
-   listed under "Follow-ups".
+   fulfils are gone, its tickets are `completed`, any work left for later is a new ticket
+   listed under "Follow-ups", and what came up while building is in the tickets that will meet
+   it or under the documents' open questions (K10).
 
 Work that is dropped loses its ticket and its planned markers in the same change.
 
@@ -107,6 +108,14 @@ rewritten, what no longer holds is deleted, and it never grows into a log of ses
 paragraph on what the area does and for whom, then Concepts, Behaviour, Design, Decisions and
 Open questions, leaving out a section with nothing to say. A document has no date, status
 line or change history.
+
+What comes up while a task is built is tracked where the next task reads it, never left in a
+session (K10). A nuance the design does not spell out, or something it leaves ambiguous, goes
+into the open ticket that will meet it next, under "Carried over". What the design leaves
+undecided is also written under Open questions in the area's document, with the ticket that
+will decide it when one exists, and that ticket links to it. Work it calls for becomes a
+ticket. The agent tells the contributor of each when the change is ready. A gap the task
+cannot finish without is a stop-and-report instead (G7).
 
 ### Tickets
 

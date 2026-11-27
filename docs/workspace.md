@@ -18,6 +18,9 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
 - The registry core exposes one value object, `CheckName`, with its error type
   `CheckNameError`. Its doc comments in `crates/cores/registry/src/check_name.rs` state the
   parsing rules.
+- The engine core exposes the step definitions of its `workspace` module: `Workspace::build`
+  turns configuration input into a workspace of valid steps, or reports every problem with
+  its location ([Pipeline](pipeline.md#the-engine-core)).
 - Every crate builds on the toolchain pinned in `rust-toolchain.toml`: Rust 1.99.1 with
   rustfmt, clippy and llvm-tools-preview.
 
@@ -27,7 +30,8 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
 
 | Crate | Path | Role |
 | --- | --- | --- |
-| `continual-registry` | `crates/cores/registry/` | The registry core, the one core so far: domain types and, as they arrive, driven-port traits. No I/O and no technology dependencies. |
+| `continual-engine` | `crates/cores/engine/` | The engine core: so far the step definitions of its `workspace` module, with the configuration input they are built from and the problems they are rejected with. No I/O and no technology dependencies. |
+| `continual-registry` | `crates/cores/registry/` | The registry core: domain types and, as they arrive, driven-port traits. No I/O and no technology dependencies. |
 | `continual` | `crates/continual/` | The CLI binary. `main.rs` is the composition root and `cli.rs` the driving adapter, built on clap. |
 | `xtask` | `xtask/` | Repository tooling, the checks behind `cargo xtask` ([Checks](checks.md)). Product crates never depend on it. |
 
@@ -52,7 +56,8 @@ dependencies (none yet) and the couplings allowed between adapters (none yet).
 
 Continual's rules are split into cores. Each is a crate under `crates/cores/<name>/` that
 holds one unit of logic and depends on no other workspace crate, another core included.
-The registry core is there already and holds `CheckName`. The rest of it and the other cores
+The registry core is there already and holds `CheckName`, and so is the engine core, which
+holds the step definitions of its `workspace` module. The rest of both and the other cores
 are planned.
 
 | Core | Path | Holds | Designed in |
@@ -129,7 +134,8 @@ tusk.toml                  the Tusk workspace manifest
 .config/nextest.toml       the nextest CI profile
 .claude/                   Claude Code settings, hooks, path-scoped rules and skills
 .github/                   CI workflows and the pull-request template
-crates/cores/registry/     the registry core, the one core so far
+crates/cores/engine/       the engine core
+crates/cores/registry/     the registry core
 crates/continual/          the CLI binary
 xtask/                     the repository checks
 ```
@@ -210,3 +216,12 @@ configuration.
 - **clap with the derive feature**, since every future command needs argument parsing.
 - **Smoke tests run the built binary** through `env!("CARGO_BIN_EXE_continual")` and
   `std::process::Command`, so they need no extra test dependency.
+
+## Open questions
+
+- Whether cores may share library crates: crates that are neither cores nor adapters and
+  hold data structures several cores use, such as a location in a configuration file and
+  the problem or finding reported there. Today each core declares its own and a bridge maps
+  between them (H4).
+  [Design library crates that cores share](../tickets/design-library-crates-that-cores-share.md)
+  decides it.

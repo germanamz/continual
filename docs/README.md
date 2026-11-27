@@ -3,7 +3,7 @@
 Each document here describes one area of Continual as a whole: what the area does, its concepts,
 its behaviour, how it is built and why. Together they are the design of the system, both what
 is built and what is planned. Planned work is tracked as tickets in [`tickets/`](../tickets/).
-The rules for both are K1 to K9 in
+The rules for both are K1 to K10 in
 [CONVENTIONS.md](../CONVENTIONS.md#design-documents-and-tickets-k).
 
 | Document | Area |
@@ -49,7 +49,8 @@ Every document follows this outline. Leave out a section that has nothing to say
   touches, the data flow, formats and files, and how its parts fit together.
 - **Decisions**: each choice, its reason and the alternatives rejected.
 - **Open questions**: what is not decided yet, with the ticket that will decide it when one
-  exists.
+  exists. A task adds here what it finds undecided while it is built (K10), and the change
+  that decides a question removes it.
 
 Write about the system in the present tense. A document has no dates, status lines or change
 history, since git and the pull requests keep those. It describes the area whole, so it is

@@ -39,7 +39,8 @@
 - [ ] Judgment-rule departures are listed above.
 - [ ] The design documents in `docs/` describe the change, and the planned markers it fulfils are removed.
 - [ ] Tickets this PR finishes are `completed`.
+- [ ] What came up while building is in the tickets that will meet it, or under the design documents' open questions.
 
 ## Follow-ups
 
-<!-- Work deliberately left for later, each as a ticket in tickets/. -->
+<!-- Work deliberately left for later, each as a ticket in tickets/. What came up while building, and where it is tracked now. -->

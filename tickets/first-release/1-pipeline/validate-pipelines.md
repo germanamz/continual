@@ -25,6 +25,16 @@ The `workspace` module in [Pipeline: the engine core](../../../docs/pipeline.md#
 [Pipeline: `continual.toml`](../../../docs/pipeline.md#continualtoml) and
 [pipelines](../../../docs/pipeline.md#pipelines).
 
+## Carried over
+
+- The engine holds the name rule once, in `StepName::parse`
+  (`crates/cores/engine/src/workspace/step_name.rs`). A pipeline name follows the same rule,
+  so it shares that definition and does not copy it (Q16).
+- `Workspace::build` reports `jobs`, the configuration's `timeout`, then the steps in the order
+  of their names. Where the problems of pipelines come in that order is this task's to say,
+  in the paragraph on configuration input in
+  [Pipeline: the engine core](../../../docs/pipeline.md#the-engine-core).
+
 ## Behaviours to test
 
 - A pipeline name follows `CheckName`'s rules.

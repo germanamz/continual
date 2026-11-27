@@ -151,6 +151,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "continual-engine"
+version = "0.1.0"
+
+[[package]]
 name = "continual-registry"
 version = "0.1.0"
 

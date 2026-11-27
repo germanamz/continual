@@ -6,7 +6,7 @@ paths:
 
 # Design document and ticket rules
 
-The full rules are K1 to K9 in `CONVENTIONS.md`. The outline and the planned-marker format are
+The full rules are K1 to K10 in `CONVENTIONS.md`. The outline and the planned-marker format are
 in `docs/README.md`, and the ticket template and Tusk calls in `tickets/README.md`.
 
 - `docs/` holds one living design document per area. Never add a spec, plan, proposal or
@@ -24,13 +24,18 @@ in `docs/README.md`, and the ticket template and Tusk calls in `tickets/README.m
 - Estimate in Fibonacci points. A task is 1, 2 or 3 points, one PR, workable on its own from
   what is merged. Work of 5 or more is a story with no points of its own, split into tasks;
   an epic groups stories (K9).
-- A ticket has a goal, links to the design sections, the behaviours to test and done criteria.
-  It never restates the design (K6).
+- A ticket has a goal, links to the design sections, what earlier tasks carried over to it,
+  the behaviours to test and done criteria. It never restates the design (K6).
 - Move the status through Tusk (`tusk_node_modify`): `active` when work starts, `completed` in
   the PR that finishes it. Delete dropped tickets with their markers (K7).
 - Link to a fact's home instead of repeating it: `VISION.md`, `CONVENTIONS.md`, `docs/`, doc
   comments, `tickets/` (K8).
 - What a later session needs and no home holds goes in `MEMORY.md`, kept short and rewritten
   whole, with no log of a session (K8).
+- Track what comes up while a task is built: a nuance the design does not spell out, or
+  something it leaves ambiguous. Add it to the open ticket that will meet it, under
+  "Carried over". What the design leaves undecided also goes under "Open questions" in the
+  area's document, and the ticket links to it there. Tell the contributor of each when the
+  change is ready (K10).
 - Run `tusk_doctor` after changing these files. It reports misplaced tickets, specs or plans
   under `docs/`, links to files that are gone, and tickets whose points break K9.
