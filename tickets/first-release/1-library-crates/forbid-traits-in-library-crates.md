@@ -20,6 +20,15 @@ The `arch` bullet in [Checks: library crates](../../../docs/checks.md#library-cr
 decision "A library crate declares no trait" in
 [decisions](../../../docs/checks.md#decisions).
 
+## Carried over
+
+- The source scan has a function for each role in `xtask/src/arch/sources.rs`:
+  `check_source` reads a core's file and `check_library_source` a library crate's, each
+  with a finding worded for its role. The workspace check already picks the second for a
+  library crate, so the trait scan goes there and a core's scan stays as it is.
+- The architecture row of the enforcement map in `CONVENTIONS.md` lists H7 and not H6. This
+  task adds H6 with the scan (a guarded change).
+
 ## Behaviours to test
 
 - A `trait` item in a library crate's source file is reported at its line, one inside an

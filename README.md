@@ -40,7 +40,7 @@ tusk claude install       # optional: the Tusk mod for Claude Code sessions
 | `cargo xtask coverage` | Tests under coverage, with the minimums enforced |
 | `cargo xtask mutants` | Mutation testing of the code changed since `origin/main` |
 | `cargo xtask comments [paths]` | The no-comment-blocks check |
-| `cargo xtask arch` | Crate dependency and core import rules |
+| `cargo xtask arch` | Crate dependency rules, and the import rules of cores and library crates |
 | `cargo xtask guard` | Changes to existing tests and gates that need a contributor's approval |
 | `cargo xtask attribution --file <msg>` | Rejects AI attribution in a commit message |
 

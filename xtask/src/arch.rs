@@ -1,12 +1,14 @@
 //! The architecture check: which crates may depend on which.
 //!
 //! Every workspace member takes one role from `arch.toml`: a core (any crate under the
-//! cores directory), a composition root, an adapter (any crate under the adapters
-//! directory) or tooling. A core depends on no other workspace crate, another core
-//! included, and only on the external crates on its own allow-list. Adapters depend
-//! only on cores and on declared couplings. Only composition roots depend on adapters,
-//! composition roots do not depend on each other, and product crates do not depend on
-//! tooling.
+//! cores directory), a library crate (any crate under the libraries directory, when
+//! `arch.toml` names one), a composition root, an adapter (any crate under the adapters
+//! directory) or tooling. A library crate depends on no workspace crate, another
+//! library crate included. A core depends on no workspace crate but library crates.
+//! Both depend only on the external crates on their own allow-list. Adapters depend
+//! only on cores, on library crates and on declared couplings. Only composition roots
+//! depend on adapters, composition roots do not depend on each other, and product
+//! crates do not depend on tooling.
 
 pub mod sources;
 
@@ -24,7 +26,10 @@ use crate::git;
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 pub struct ArchConfig {
     /// Where the cores live and each core's external allow-list.
-    pub cores: CoreRules,
+    pub cores: AllowListedCrates,
+    /// Where the library crates live and each one's external allow-list. Absent while
+    /// the workspace has no library crate.
+    pub libraries: Option<AllowListedCrates>,
     /// The crates allowed to wire adapters, one per deployable.
     pub composition_roots: CrateList,
     /// Where adapters live and which of them may use each other.
@@ -33,24 +38,25 @@ pub struct ArchConfig {
     pub tooling: CrateList,
 }
 
-/// The `[cores]` table.
+/// The `[cores]` table or the `[libraries]` table: a directory whose every crate takes
+/// the table's role, and an external allow-list for each of those crates.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
-pub struct CoreRules {
-    /// Directory, relative to the workspace root, holding every core crate.
+pub struct AllowListedCrates {
+    /// Directory, relative to the workspace root, holding every crate of the role.
     pub directory: PathBuf,
-    /// The external crates each core may depend on, by the core's package name.
+    /// The external crates each crate may depend on, by that crate's package name.
     #[serde(default)]
     pub allowed_dependencies: BTreeMap<String, Vec<AllowedDependency>>,
 }
 
-/// An external crate a core may use, with the reason it is allowed.
+/// An external crate a core or a library crate may use, with the reason it is allowed.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AllowedDependency {
     /// Package name.
     pub name: String,
-    /// Why that core may depend on it.
+    /// Why that crate may depend on it.
     pub reason: String,
 }
 
@@ -153,24 +159,37 @@ impl std::error::Error for ArchError {}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Role {
     Core,
+    Library,
     CompositionRoot,
     Adapter,
     Tooling,
 }
 
+/// The cores or the library crates: a role whose every crate has an allow-list, with
+/// the words a finding uses for it.
+struct AllowListed<'a> {
+    role: Role,
+    /// What a finding calls one crate of the role.
+    noun: &'static str,
+    /// The name of the role's table in `arch.toml`.
+    table: &'static str,
+    rules: &'a AllowListedCrates,
+}
+
+/// The check that reads one source file of a crate, which depends on the crate's role.
+type SourceCheck = fn(&Path, &str) -> Result<Vec<Finding>, syn::Error>;
+
 /// Runs every architecture rule on the workspace at `root`: the dependency graph
-/// against `arch.toml`, then every core's sources against [`sources::check_source`].
+/// against `arch.toml`, then every core's sources against [`sources::check_source`]
+/// and every library crate's against [`sources::check_library_source`].
 ///
 /// # Errors
 ///
-/// Fails when `arch.toml`, `cargo metadata`, git or a core source cannot be read.
+/// Fails when `arch.toml`, `cargo metadata`, git or a scanned source cannot be read.
 pub fn check_workspace(root: &Path) -> Result<Vec<Finding>, ArchError> {
     let (config, graph) = load(root)?;
     let mut findings = check_graph(&config, &graph);
-    let core_dirs: Vec<&Path> = core_packages(&config, &graph)
-        .map(|core| core.manifest_dir.as_path())
-        .collect();
-    findings.extend(check_core_sources(root, &core_dirs)?);
+    findings.extend(check_sources(root, &scanned_crates(&config, &graph))?);
     Ok(findings)
 }
 
@@ -207,14 +226,40 @@ fn is_core(config: &ArchConfig, package: &PackageNode) -> bool {
     package.manifest_dir.starts_with(&config.cores.directory)
 }
 
-fn check_core_sources(root: &Path, core_dirs: &[&Path]) -> Result<Vec<Finding>, ArchError> {
+/// The directory of every crate whose sources are read, with the check its role gets.
+fn scanned_crates<'a>(
+    config: &ArchConfig,
+    graph: &'a WorkspaceGraph,
+) -> Vec<(&'a Path, SourceCheck)> {
+    graph
+        .packages
+        .iter()
+        .filter_map(|package| {
+            let check = source_check(role_of(config, package)?)?;
+            Some((package.manifest_dir.as_path(), check))
+        })
+        .collect()
+}
+
+/// The source check of `role`: only a core's and a library crate's sources are read.
+fn source_check(role: Role) -> Option<SourceCheck> {
+    match role {
+        Role::Core => Some(sources::check_source),
+        Role::Library => Some(sources::check_library_source),
+        Role::CompositionRoot | Role::Adapter | Role::Tooling => None,
+    }
+}
+
+fn check_sources(root: &Path, scanned: &[(&Path, SourceCheck)]) -> Result<Vec<Finding>, ArchError> {
     let files = git::rust_files(root).map_err(|error| ArchError(format!("git: {error}")))?;
-    let in_a_core = |file: &&PathBuf| core_dirs.iter().any(|dir| file.starts_with(dir));
     let mut findings = Vec::new();
-    for file in files.iter().filter(in_a_core) {
+    for file in &files {
+        let Some((_, check)) = scanned.iter().find(|(dir, _)| file.starts_with(dir)) else {
+            continue;
+        };
         let source = std::fs::read_to_string(root.join(file))
             .map_err(|error| ArchError(format!("{}: {error}", file.display())))?;
-        let found = sources::check_source(file, &source)
+        let found = check(file, &source)
             .map_err(|error| ArchError(format!("{}: {error}", file.display())))?;
         findings.extend(found);
     }
@@ -294,12 +339,12 @@ fn kind_of(kind: cargo_metadata::DependencyKind) -> DependencyKind {
 /// Checks the dependency graph against the rules in `config`.
 #[must_use]
 pub fn check_graph(config: &ArchConfig, graph: &WorkspaceGraph) -> Vec<Finding> {
-    let mut findings = config_findings(config, graph);
     let roles: HashMap<&str, Role> = graph
         .packages
         .iter()
         .filter_map(|package| role_of(config, package).map(|role| (package.name.as_str(), role)))
         .collect();
+    let mut findings = config_findings(config, graph, &roles);
     for package in &graph.packages {
         let path = package.manifest_dir.join("Cargo.toml");
         let messages = package_messages(config, package, &roles);
@@ -318,19 +363,18 @@ fn package_messages(
     roles: &HashMap<&str, Role>,
 ) -> Vec<String> {
     let name = &package.name;
-    let mut messages = match roles.get(name.as_str()) {
-        None => vec![format!(
-            "`{name}` has no role in arch.toml: name it as a composition root or tooling, or \
-             move it under {} or {}",
-            config.cores.directory.display(),
-            config.adapters.directory.display()
-        )],
-        Some(role) => dependency_messages(config, package, *role, roles),
+    let role = roles.get(name.as_str()).copied();
+    let mut messages = match role {
+        None => vec![no_role_message(config, name)],
+        Some(role) => dependency_messages(config, package, role, roles),
     };
-    if is_core(config, package) && !config.cores.allowed_dependencies.contains_key(name) {
+    if let Some(listed) = role.and_then(|role| allow_listed(config, role))
+        && !listed.rules.allowed_dependencies.contains_key(name)
+    {
         messages.push(format!(
-            "core `{name}` has no allow-list in arch.toml: add `{name} = []` under \
-             `[cores.allowed-dependencies]`"
+            "{} `{name}` has no allow-list in arch.toml: add `{name} = []` under \
+             `[{}.allowed-dependencies]`",
+            listed.noun, listed.table
         ));
     }
     if !package.inherits_workspace_lints {
@@ -341,10 +385,34 @@ fn package_messages(
     messages
 }
 
-fn config_findings(config: &ArchConfig, graph: &WorkspaceGraph) -> Vec<Finding> {
+/// What a crate that takes no role is told: the roles `arch.toml` names by crate, and
+/// the directories whose crates take a role.
+fn no_role_message(config: &ArchConfig, name: &str) -> String {
+    let libraries = config
+        .libraries
+        .as_ref()
+        .map(|libraries| format!(", {}", libraries.directory.display()))
+        .unwrap_or_default();
+    format!(
+        "`{name}` has no role in arch.toml: name it as a composition root or tooling, or \
+         move it under {}{libraries} or {}",
+        config.cores.directory.display(),
+        config.adapters.directory.display()
+    )
+}
+
+fn config_findings(
+    config: &ArchConfig,
+    graph: &WorkspaceGraph,
+    roles: &HashMap<&str, Role>,
+) -> Vec<Finding> {
+    let tables = [Role::Core, Role::Library]
+        .into_iter()
+        .filter_map(|role| allow_listed(config, role))
+        .flat_map(|listed| table_messages(&listed, roles));
     missing_crates(config, graph)
         .into_iter()
-        .chain(cores_table_messages(config, graph))
+        .chain(tables)
         .chain(missing_reasons(config))
         .map(|message| Finding {
             path: PathBuf::from("arch.toml"),
@@ -354,25 +422,48 @@ fn config_findings(config: &ArchConfig, graph: &WorkspaceGraph) -> Vec<Finding> 
         .collect()
 }
 
-/// What is wrong with the `[cores]` table: a directory that holds no crate, so the
-/// core rules would check nothing, and allow-lists that name no core.
-fn cores_table_messages(config: &ArchConfig, graph: &WorkspaceGraph) -> Vec<String> {
-    let directory = config.cores.directory.display();
-    let cores: Vec<&str> = core_packages(config, graph)
-        .map(|core| core.name.as_str())
-        .collect();
-    let empty = cores.is_empty().then(|| {
-        format!("arch.toml names the cores directory `{directory}`, which holds no crate")
+/// The table that holds the allow-lists of `role`'s crates, for the roles that have
+/// one: the cores, and the library crates once `arch.toml` names their directory.
+fn allow_listed(config: &ArchConfig, role: Role) -> Option<AllowListed<'_>> {
+    match role {
+        Role::Core => Some(AllowListed {
+            role,
+            noun: "core",
+            table: "cores",
+            rules: &config.cores,
+        }),
+        Role::Library => config.libraries.as_ref().map(|rules| AllowListed {
+            role,
+            noun: "library crate",
+            table: "libraries",
+            rules,
+        }),
+        Role::CompositionRoot | Role::Adapter | Role::Tooling => None,
+    }
+}
+
+/// What is wrong with the `[cores]` or the `[libraries]` table: a directory that holds
+/// no crate, so the role's rules would check nothing, and allow-lists that name no
+/// crate of the role.
+fn table_messages(listed: &AllowListed<'_>, roles: &HashMap<&str, Role>) -> Vec<String> {
+    let directory = listed.rules.directory.display();
+    let has_the_role = |name: &str| roles.get(name) == Some(&listed.role);
+    let empty = (!roles.keys().any(|name| has_the_role(name))).then(|| {
+        format!(
+            "arch.toml names the {} directory `{directory}`, which holds no crate",
+            listed.table
+        )
     });
-    let stray = config
-        .cores
+    let stray = listed
+        .rules
         .allowed_dependencies
         .keys()
-        .filter(|name| !cores.contains(&name.as_str()))
+        .filter(|name| !has_the_role(name))
         .map(|name| {
             format!(
-                "arch.toml holds an allow-list for `{name}`, which is not a core under \
-                 {directory}"
+                "arch.toml holds an allow-list for `{name}`, which is not a {} under \
+                 {directory}",
+                listed.noun
             )
         });
     empty.into_iter().chain(stray).collect()
@@ -390,15 +481,14 @@ fn missing_crates(config: &ArchConfig, graph: &WorkspaceGraph) -> Vec<String> {
 }
 
 fn missing_reasons(config: &ArchConfig) -> Vec<String> {
-    let allowed = config
-        .cores
-        .allowed_dependencies
-        .iter()
-        .flat_map(|(core, entries)| entries.iter().map(move |entry| (core, entry)))
+    let allowed = std::iter::once(&config.cores)
+        .chain(&config.libraries)
+        .flat_map(|rules| &rules.allowed_dependencies)
+        .flat_map(|(owner, entries)| entries.iter().map(move |entry| (owner, entry)))
         .filter(|(_, entry)| entry.reason.trim().is_empty())
-        .map(|(core, entry)| {
+        .map(|(owner, entry)| {
             format!(
-                "allow-list entry `{}` of `{core}` needs a reason",
+                "allow-list entry `{}` of `{owner}` needs a reason",
                 entry.name
             )
         });
@@ -417,8 +507,12 @@ fn missing_reasons(config: &ArchConfig) -> Vec<String> {
 }
 
 fn role_of(config: &ArchConfig, package: &PackageNode) -> Option<Role> {
+    let in_the_libraries =
+        |libraries: &AllowListedCrates| package.manifest_dir.starts_with(&libraries.directory);
     if is_core(config, package) {
         Some(Role::Core)
+    } else if config.libraries.as_ref().is_some_and(in_the_libraries) {
+        Some(Role::Library)
     } else if config.composition_roots.crates.contains(&package.name) {
         Some(Role::CompositionRoot)
     } else if config.tooling.crates.contains(&package.name) {
@@ -462,20 +556,39 @@ struct DependencyUse<'a> {
 }
 
 fn violation(config: &ArchConfig, edge: &DependencyUse<'_>) -> Option<String> {
-    let (from, to) = (edge.from, &edge.dependency.name);
-    if !edge.dependency.workspace_member {
-        let allowed = edge.role != Role::Core || is_allowed(config, from, to);
-        return (!allowed).then(|| {
-            format!("core depends on `{to}`, which is not on its allow-list in arch.toml")
-        });
+    if edge.dependency.workspace_member {
+        workspace_violation(config, edge)
+    } else {
+        external_violation(config, edge)
     }
+}
+
+/// What is wrong with a dependency on a crate outside the workspace: a core or a
+/// library crate may use only the crates on its own allow-list.
+fn external_violation(config: &ArchConfig, edge: &DependencyUse<'_>) -> Option<String> {
+    let listed = allow_listed(config, edge.role)?;
+    let to = &edge.dependency.name;
+    (!is_allowed(listed.rules, edge.from, to)).then(|| {
+        format!(
+            "{} depends on `{to}`, which is not on its allow-list in arch.toml",
+            listed.noun
+        )
+    })
+}
+
+/// What is wrong with a dependency on another workspace crate, by the two roles.
+fn workspace_violation(config: &ArchConfig, edge: &DependencyUse<'_>) -> Option<String> {
+    let (from, to) = (edge.from, &edge.dependency.name);
     match (edge.role, edge.target) {
-        (Role::Core, _) => Some(format!(
-            "core depends on workspace crate `{to}`; a core depends on no other workspace crate"
+        (Role::Library, _) => Some(format!(
+            "library crate depends on workspace crate `{to}`; a library crate depends on no workspace crate"
         )),
-        (Role::Adapter, Some(Role::Core)) => None,
+        (Role::Core, Some(Role::Library)) | (Role::Adapter, Some(Role::Core | Role::Library)) => None,
+        (Role::Core, _) => Some(format!(
+            "core depends on workspace crate `{to}`; a core depends on no workspace crate but library crates"
+        )),
         (Role::Adapter, _) => (!is_coupled(config, from, to)).then(|| {
-            format!("adapter `{from}` depends on `{to}`; adapters depend only on cores and on couplings declared in arch.toml")
+            format!("adapter `{from}` depends on `{to}`; adapters depend only on cores, library crates and couplings declared in arch.toml")
         }),
         (Role::Tooling, Some(Role::Adapter)) => {
             Some(format!("`{from}` depends on adapter `{to}`; only composition roots wire adapters"))
@@ -490,12 +603,11 @@ fn violation(config: &ArchConfig, edge: &DependencyUse<'_>) -> Option<String> {
     }
 }
 
-/// Whether `dependency` is on the allow-list of `core`, and of that core only.
-fn is_allowed(config: &ArchConfig, core: &str, dependency: &str) -> bool {
-    config
-        .cores
+/// Whether `dependency` is on the allow-list of `owner`, and of that crate only.
+fn is_allowed(rules: &AllowListedCrates, owner: &str, dependency: &str) -> bool {
+    rules
         .allowed_dependencies
-        .get(core)
+        .get(owner)
         .is_some_and(|entries| entries.iter().any(|entry| entry.name == dependency))
 }
 

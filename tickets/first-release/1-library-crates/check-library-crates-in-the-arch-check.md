@@ -8,7 +8,7 @@ blocks:
 parent: tickets/first-release/1-library-crates/story
 points: 3
 priority: high
-status: pending
+status: completed
 ---
 
 # Check library crates in the arch check

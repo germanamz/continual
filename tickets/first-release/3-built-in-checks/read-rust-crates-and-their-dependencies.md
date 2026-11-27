@@ -25,6 +25,15 @@ running `cargo metadata`.
 The `rust` notes and the manifest decision in
 [Built-in checks](../../../docs/built-in-checks.md#ports-and-adapters).
 
+## Carried over
+
+- The fixtures of `cargo xtask arch` let a tooling crate depend on a library crate and
+  report a composition root that depends on another. The designed settings do neither: their
+  `tooling` layer names no `may_depend_on` and their `composition-roots` layer is not
+  `independent`. What the two layers say is an
+  [open question](../../../docs/built-in-checks.md#open-questions), which this task settles
+  with the contributor before it holds the settings to those fixtures.
+
 ## Behaviours to test
 
 - The architecture core's `LanguageSyntax` contract suite for manifests passes against the

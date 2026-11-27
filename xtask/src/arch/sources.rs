@@ -1,9 +1,10 @@
-//! Forbidden standard-library modules in a core's sources.
+//! Forbidden standard-library modules in the sources of a core or a library crate.
 //!
 //! A core reaches files, the network, the environment, processes, I/O streams and
 //! threads only through ports, so its sources must not name the `std` modules that
-//! provide them. This complements the clippy `disallowed-*` lists in each core's
-//! `clippy.toml`, which catch calls but not imports.
+//! provide them. A library crate holds data and reaches none of them at all, so its
+//! sources are read the same way. This complements the clippy `disallowed-*` lists in
+//! each such crate's `clippy.toml`, which catch calls but not imports.
 
 use std::path::Path;
 
@@ -13,7 +14,7 @@ use syn::visit::Visit;
 
 use crate::finding::Finding;
 
-/// The `std` modules a core must not name.
+/// The `std` modules a core or a library crate must not name.
 pub const FORBIDDEN_MODULES: [&str; 6] = ["fs", "net", "env", "process", "io", "thread"];
 
 /// Checks one core source file for paths under [`FORBIDDEN_MODULES`].
@@ -22,6 +23,32 @@ pub const FORBIDDEN_MODULES: [&str; 6] = ["fs", "net", "env", "process", "io", "
 ///
 /// Fails when `source` is not valid Rust.
 pub fn check_source(path: &Path, source: &str) -> Result<Vec<Finding>, syn::Error> {
+    forbidden_paths(path, source, |module| {
+        format!("core must not use `std::{module}`: reach the outside world through a port")
+    })
+}
+
+/// Checks one library crate source file for paths under [`FORBIDDEN_MODULES`].
+///
+/// # Errors
+///
+/// Fails when `source` is not valid Rust.
+pub fn check_library_source(path: &Path, source: &str) -> Result<Vec<Finding>, syn::Error> {
+    forbidden_paths(path, source, |module| {
+        format!(
+            "library crate must not use `std::{module}`: it holds data and reaches nothing \
+             outside itself"
+        )
+    })
+}
+
+/// One finding for each path under [`FORBIDDEN_MODULES`] in `source`, worded by
+/// `message` from the module's name.
+fn forbidden_paths(
+    path: &Path,
+    source: &str,
+    message: impl Fn(&str) -> String,
+) -> Result<Vec<Finding>, syn::Error> {
     let file = syn::parse_file(source)?;
     let mut visitor = Visitor::default();
     visitor.visit_file(&file);
@@ -31,9 +58,7 @@ pub fn check_source(path: &Path, source: &str) -> Result<Vec<Finding>, syn::Erro
         .map(|(line, module)| Finding {
             path: path.to_path_buf(),
             line,
-            message: format!(
-                "core must not use `std::{module}`: reach the outside world through a port"
-            ),
+            message: message(module),
         })
         .collect())
 }

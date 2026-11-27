@@ -35,6 +35,10 @@ uses the same records and no bridge maps them.
   ([MEMORY.md](../../../MEMORY.md)). Confirm it before creating the crate.
 - If [Prepare the crates for crates.io](../7-releases/prepare-the-crates-for-crates-io.md)
   is merged, the new crate meets what that task set up for every product crate.
+- Without a `[libraries]` table, `cargo xtask arch` gives a crate under `crates/libraries` no
+  role, so the table arrives in the same change as the crate, with a comment like the one
+  on `[cores]`. The paragraph on `arch.toml` under "Crates" in `docs/workspace.md` then names
+  the library role and its directory beside the others.
 
 ## Behaviours to test
 

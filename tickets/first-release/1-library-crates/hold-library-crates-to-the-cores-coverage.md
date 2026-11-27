@@ -24,6 +24,11 @@ rule H7 in [CONVENTIONS.md](../../../CONVENTIONS.md#cores-h).
 - The coverage paragraph under the T rules in `CONVENTIONS.md` and the `coverage` paragraph
   in `docs/checks.md` speak of each core's lines. This task adds the library crates to both;
   the first is a guarded change.
+- `xtask::arch::cores` lists the cores for the coverage check, and nothing lists the library
+  crates yet, since nothing read such a list (Q19). This task adds the listing. A workspace
+  whose `arch.toml` has no `[libraries]` table has no library crate, which is no violation.
+- H7's "Check" cell in `CONVENTIONS.md` still names `cargo xtask coverage` as a check to
+  come. This task makes it one that holds (a guarded change).
 
 ## Behaviours to test
 

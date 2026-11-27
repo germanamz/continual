@@ -92,7 +92,8 @@ in its own crate.
    between them, handing a library crate's types on unchanged (H3).
 5. Wire it in the composition root: each core after the driven adapters it needs, a bridge
    after the core it calls, and the driving adapters last (B5).
-6. Run `cargo xtask arch`: it confirms the new crate is classified and depends only on cores.
+6. Run `cargo xtask arch`: it confirms the new crate is classified and, of the workspace's
+   crates, depends only on cores and library crates.
 
 ## Workflow: swap a technology
 

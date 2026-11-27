@@ -30,8 +30,9 @@ This document describes how the checks work and why they are built this way.
   get explanatory text.
 - **No gate passes vacuously.** Each check has fixture tests that show it failing on a
   violation and passing on clean input. A check also fails when what it checks is missing: the
-  arch check when a configured crate is absent or the cores directory holds no crate, the
-  coverage check when the report has no data for the workspace or for one of its cores.
+  arch check when a configured crate is absent or when the cores directory, or the libraries
+  directory once `arch.toml` names one, holds no crate, the coverage check when the report
+  has no data for the workspace or for one of its cores.
 - **One implementation per check.** Claude Code hooks, lefthook and GitHub Actions all call
   the same `cargo xtask` commands. Each check is a pure function over source text or data.
   Launching external tools is thin glue in `xtask/src/runner.rs`, the only code excluded from
@@ -115,18 +116,21 @@ This document describes how the checks work and why they are built this way.
 The checks hold a [library crate](workspace.md#library-crates) as they hold a core, and add
 what keeps the role from becoming a way round the boundaries between cores.
 
-> Planned: [Check library crates in the arch check](../tickets/first-release/1-library-crates/check-library-crates-in-the-arch-check.md)
-
 - **`arch`** reads a `[libraries]` table from `arch.toml`, shaped like `[cores]`: the
   directory that holds the library crates, `crates/libraries`, and under
   `[libraries.allowed-dependencies]` an allow-list of external crates for each of them, keyed
-  by its package name. The table is absent while the workspace has no library crate. Once it
-  is there, a directory that holds no crate is a finding, and so are a library crate without
-  a list and a list that names no library crate. A library crate depends on no workspace
-  crate, another library crate included, and only on the external crates on its own list,
-  counting normal, dev and build dependencies. A core, an adapter and a composition root may
-  each depend on a library crate, and a core still depends on no other workspace crate. The
-  source scan reads a library crate's sources as it reads a core's.
+  by its package name. The table is absent while the workspace has no library crate, and
+  without it no crate is a library crate: one under `crates/libraries` has no role, which is
+  a finding. Once the table is there, every crate under its directory is a library crate. A
+  directory that holds no crate is a finding, and so are a library crate without a list, a
+  list that names no library crate and a list entry without a reason. A library crate
+  depends on no workspace crate, another library crate included, and only on the external
+  crates on its own list, counting normal, dev and build dependencies. Like any crate, it may
+  dev-depend on itself. A core, an adapter and a composition root may each depend on a
+  library crate, and a core still depends on no other workspace crate. Tooling may depend on
+  one too, as it may on a core. The source scan reads a library crate's sources as it reads
+  a core's and rejects the same `std` paths. Its finding names the library crate and offers
+  no port, since a library crate has none to reach the outside world through.
 
 > Planned: [Forbid traits in library crates](../tickets/first-release/1-library-crates/forbid-traits-in-library-crates.md)
 
