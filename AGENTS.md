@@ -27,8 +27,8 @@ fixes for PR comments.
 
 ## Map
 
-- `crates/continual-core/`: the one core so far. Domain types and port traits; no I/O. The
-  planned cores go under `crates/cores/<name>/` (`docs/workspace.md`).
+- `crates/cores/registry/`: the one core so far. Domain types and port traits; no I/O. The
+  planned cores go beside it, under `crates/cores/<name>/` (`docs/workspace.md`).
 - `crates/continual/`: the CLI binary. `main.rs` is the composition root, `cli.rs` the driving
   adapter.
 - `crates/adapters/<name>/`: adapter crates, bridges among them (none yet).

@@ -74,7 +74,7 @@ pub fn coverage() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    match coverage::evaluate(&report, "crates/continual-core/", &coverage::THRESHOLDS) {
+    match coverage::evaluate(&report, "crates/cores/registry/", &coverage::THRESHOLDS) {
         Ok(violations) if violations.is_empty() => {
             println!("coverage: thresholds met");
             ExitCode::SUCCESS

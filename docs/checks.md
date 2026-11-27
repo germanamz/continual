@@ -54,7 +54,7 @@ This document describes how the checks work and why they are built this way.
 - `clippy.toml` sets the limits from decision D1 (30 lines, cognitive complexity 15, `self`
   plus 3 parameters, three nested blocks), calibrated to how clippy counts, and lets test code
   use `unwrap`, `expect`, `panic`, printing and indexing.
-- `crates/continual-core/clippy.toml` repeats those thresholds, because clippy reads only the
+- `crates/cores/registry/clippy.toml` repeats those thresholds, because clippy reads only the
   nearest `clippy.toml` and does not merge them. It adds `max-fn-params-bools = 0` and
   disallows the standard library's file system, network, process, environment, stdio, thread
   and clock APIs, each with the port to use instead.
@@ -90,7 +90,8 @@ This document describes how the checks work and why they are built this way.
   becomes anything but `workspace = true`, and every new `#[expect]` attribute. Adding a test
   is never reported. A source file it cannot parse is reported, not skipped.
 - **`coverage`** runs `cargo llvm-cov nextest`, writes `target/coverage-summary.json` and
-  requires workspace lines and functions at 90% or more and `continual-core` lines at 95% or more.
+  requires workspace lines and functions at 90% or more and `continual-registry` lines at 95% or
+  more.
 - **`mutants`** runs `cargo mutants --in-diff` on the changes since the merge base, untracked
   files included, with the settings in `.cargo/mutants.toml`: nextest as the test tool, a copy
   of `.git` in each scratch tree (the arch check lists files through git), and `runner.rs`
@@ -108,7 +109,7 @@ the directory that holds them, and every crate under it is a core with an allow-
 external crates of its own. A core depends on no workspace crate, another core included. An
 adapter depends only on cores and on declared couplings, so a bridge depends on the two
 cores it joins. The source scan covers every core, each core carries a `clippy.toml` with the
-lists `crates/continual-core/clippy.toml` holds today, and `coverage` requires 95% of the
+lists `crates/cores/registry/clippy.toml` holds today, and `coverage` requires 95% of the
 lines of each core.
 
 ### Tests

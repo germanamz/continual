@@ -1,6 +1,5 @@
 ---
 paths:
-  - "crates/continual-core/**"
   - "crates/cores/**"
 ---
 
