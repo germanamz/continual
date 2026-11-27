@@ -2,9 +2,9 @@
 type: ticket
 title: Hold Continual's rules in several cores
 blocks:
-  - tickets/first-release/1-pipeline/story
-  - tickets/first-release/2-built-in-checks/story
-  - tickets/first-release/4-claude-code-mod/story
+  - tickets/first-release/2-pipeline/story
+  - tickets/first-release/3-built-in-checks/story
+  - tickets/first-release/5-claude-code-mod/story
 order: 0
 parent: tickets/first-release/epic
 priority: high

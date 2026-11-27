@@ -24,11 +24,12 @@ tickets/
 └── first-release/
     ├── epic.md                   Self-host Continual on its first release
     ├── 0-cores/
-    ├── 1-pipeline/
+    ├── 1-library-crates/
+    ├── 2-pipeline/
     │   ├── story.md              Run a repository's steps from continual.toml
     │   ├── validate-step-definitions.md
     │   └── …
-    ├── 2-built-in-checks/
+    ├── 3-built-in-checks/
     └── …
 ```
 
@@ -59,9 +60,9 @@ title: Check comments in any language
 status: pending
 priority: medium
 points: 2
-parent: tickets/first-release/2-built-in-checks/story
+parent: tickets/first-release/3-built-in-checks/story
 blocks:
-  - tickets/first-release/2-built-in-checks/run-check-steps
+  - tickets/first-release/3-built-in-checks/run-check-steps
 ---
 
 # Check comments in any language

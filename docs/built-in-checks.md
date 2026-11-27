@@ -1,6 +1,6 @@
 # Built-in checks
 
-> Planned: [Run the built-in checks in Continual](../tickets/first-release/2-built-in-checks/story.md)
+> Planned: [Run the built-in checks in Continual](../tickets/first-release/3-built-in-checks/story.md)
 
 Continual's own checks, for the rules that existing tools do not cover: comments,
 architecture, the guard and commit messages ([rules](../VISION.md#rules)). A repository runs
@@ -27,6 +27,8 @@ Check, check name, finding, language and guarded change mean what the
 - **Unit**: what the architecture check draws boundaries between: a Rust crate, and in other
   languages the package or module their adapter defines.
 - **Layer**: a named group of units with the layers it may depend on.
+- **Interface**: a declaration that other code implements: a trait in Rust, and in other
+  languages what their adapter defines.
 - **Approval label**: the label a contributor puts on a pull request to approve its guarded
   changes. It is always `guard-approved`, and no setting renames it ([guard](#guard)).
 
@@ -105,8 +107,17 @@ what each may depend on:
 check = "architecture"
 
 [[steps.conventions.checks.layers]]
+name = "libraries"
+units = ["crates/libraries/*"]
+independent = true
+external = []
+forbidden_imports = ["std::fs", "std::net", "std::env", "std::process", "std::io", "std::thread"]
+interfaces = false
+
+[[steps.conventions.checks.layers]]
 name = "cores"
 units = ["crates/cores/*"]
+may_depend_on = ["libraries"]
 independent = true
 external = []
 forbidden_imports = ["std::fs", "std::net", "std::env", "std::process", "std::io", "std::thread"]
@@ -114,13 +125,13 @@ forbidden_imports = ["std::fs", "std::net", "std::env", "std::process", "std::io
 [[steps.conventions.checks.layers]]
 name = "adapters"
 units = ["crates/adapters/*"]
-may_depend_on = ["cores"]
+may_depend_on = ["libraries", "cores"]
 independent = true
 
 [[steps.conventions.checks.layers]]
 name = "composition-roots"
 units = ["continual"]
-may_depend_on = ["cores", "adapters"]
+may_depend_on = ["libraries", "cores", "adapters"]
 
 [[steps.conventions.checks.layers]]
 name = "tooling"
@@ -137,6 +148,13 @@ units = ["xtask"]
   Without it, a layer's external dependencies are not checked.
 - `forbidden_imports` lists import paths that the layer's source files must not use.
 - A unit may depend on itself, to enable test features.
+
+> Planned: [Forbid interfaces in a layer](../tickets/first-release/3-built-in-checks/forbid-interfaces-in-a-layer.md)
+
+A layer with `interfaces = false` declares no [interface](#concepts) in its source files, and
+each one it declares is a finding at its line. Without the key, or with `interfaces = true`,
+a layer may declare them. Continual's library crates are such a layer: they hold data and no
+port ([Workspace](workspace.md#library-crates)).
 
 This repository's `arch.toml` becomes this check's settings in `continual.toml`.
 
@@ -271,9 +289,10 @@ core holds:
   passes them to it. The rule never calls a port itself (M5).
 
 A check core knows nothing of the registry, of steps or of how `continual.toml` is written,
-so it can be used without the rest of Continual. A check that reads source text holds one
-`LanguageSyntax` implementation for each language and chooses among them by a file's
-extension.
+so it can be used without the rest of Continual. What it reports is the `Finding` that every
+core speaks, a type of the library crate ([Workspace](workspace.md#library-crates)). A check
+that reads source text holds one `LanguageSyntax` implementation for each language and
+chooses among them by a file's extension.
 
 Adding a check is a new core, its bridge and one line in the composition root. No other core
 or adapter changes, unless the rule needs a fact that no adapter reads yet.
@@ -287,7 +306,7 @@ or adapter changes, unless the rule needs a fact that no adapter reads yet.
 | registry | `SourceTree` | The files git tracks or would track under a directory, and a file's text | `crates/adapters/git` |
 | comments | `LanguageSyntax` | For one language, from a file's text: its comments, and which of them read as code | `crates/adapters/rust` |
 | architecture | `SourceTree` | The files git tracks or would track under a directory, and a file's text | `crates/adapters/git` |
-| architecture | `LanguageSyntax` | For one language: from a manifest's text, with the text of the workspace manifest it inherits from, the unit it declares and that unit's dependencies; from a file's text, its imports | `crates/adapters/rust` |
+| architecture | `LanguageSyntax` | For one language: from a manifest's text, with the text of the workspace manifest it inherits from, the unit it declares and that unit's dependencies; from a file's text, its imports and the interfaces it declares | `crates/adapters/rust` |
 | guard | `ChangeHistory` | The merge base with a revision, the files changed or deleted since it, and a file's text at that revision and in the working tree | `crates/adapters/git` |
 | guard | `LanguageSyntax` | For one language, from a file's text: its tests and its lint suppressions; and whether a change loosens the language's lint configuration | `crates/adapters/rust` |
 | commit-messages | `ChangeHistory` | The messages of the commits in a range, and the message in a commit message file | `crates/adapters/git` |
@@ -304,19 +323,19 @@ or adapter changes, unless the rule needs a fact that no adapter reads yet.
   hanging.
 - `LanguageSyntax` is pure: text in, facts out, with no file system and no processes. Like
   tree-sitter's queries, it speaks in generic concepts (comment, comment that reads as code,
-  import, test, lint suppression, unit, dependency) and each language adapter fills them in from
-  its own syntax. Each adapter states the file extensions and manifest names it handles, and a
-  check core chooses the adapter by extension. The composition root hands each check core
-  every language adapter compiled into the binary.
-- The `rust` adapter lexes comments with `ra-ap-rustc_lexer`, reads imports, tests and
-  suppressions with `syn`, and reads crates and their dependencies from `Cargo.toml`
+  import, interface, test, lint suppression, unit, dependency) and each language adapter
+  fills them in from its own syntax. Each adapter states the file extensions and manifest
+  names it handles, and a check core chooses the adapter by extension. The composition root
+  hands each check core every language adapter compiled into the binary.
+- The `rust` adapter lexes comments with `ra-ap-rustc_lexer`, reads imports, traits, tests
+  and suppressions with `syn`, and reads crates and their dependencies from `Cargo.toml`
   manifests with `toml`, the libraries `xtask` uses today.
 - The `context` adapter is the execution context: the one object the composition root builds
   for what a core needs from the machinery of a run and not from the repository. It answers
   the engine's `Timer`, which ends a check step that runs past its time limit
   ([Pipeline](pipeline.md#ports-and-adapters)), and the commit-messages core's `Patterns`,
-  with the `regex` crate. A core that needs a library asks for it this way, through a port
-  of its own, so no core carries an external dependency.
+  with the `regex` crate. A core that needs a third-party library asks for it this way,
+  through a port of its own, so no core carries an external dependency.
 - A step's checks are one future of the run ([Pipeline](pipeline.md#the-engine-core)). The
   operations that wait on the repository are asynchronous: `SourceTree`, `ChangeHistory`,
   `BaseEntries` and a check's inspection through `Check`. A check that waits for git
@@ -335,19 +354,22 @@ or adapter changes, unless the rule needs a fact that no adapter reads yet.
 
 A bridge joins two cores. It is a driven adapter of the core whose port it implements and a
 driving adapter of the core it calls, and it only translates between their types (H2, H3).
+What both cores speak as a type of the library crate, such as a `Finding` or an entry's
+located values, it hands on unchanged ([Workspace](workspace.md#library-crates)).
 
 - **`engine-registry`** holds one adapter for each direction. One implements the engine's
   `CheckRunner` ([Pipeline](pipeline.md#ports-and-adapters)) by calling the registry: it
-  turns a check step's entries, package, files and inputs into the registry's input, and
-  hands each finding back as a line of the step's output, `path:line: message`, with the
-  step's outcome. The other implements the registry's `BaseEntries` by calling the engine's
-  reader of the base revision's entries, which needs no registry, so each adapter is built
-  after the core it calls and before the core it serves (B5).
+  turns a check step's entries, package, files and inputs into the registry's input, with
+  each entry's located values as they are, and hands each finding back as a line of the
+  step's output, `path:line: message`, with the step's outcome. The other implements the
+  registry's `BaseEntries` by calling the engine's reader of the base revision's entries,
+  which needs no registry, so each adapter is built after the core it calls and before the
+  core it serves (B5).
 - **`registry-<check>`**, one crate for each check, implements the registry's `Check` by
   calling its check core. It states the check's name and kind, and reads an entry's located
   values into the check's settings: it rejects an unknown key or a wrong type with its line
-  (V1), and gives the line of any setting the check core itself rejects. It maps the check's
-  findings to the registry's.
+  (V1), and gives the line of any setting the check core itself rejects. It hands the
+  check's findings to the registry as they are.
 
 `main.rs` builds each check core with the adapters it needs, wraps it in its bridge and
 hands the bridges to the registry, so the composition root is the one place that lists the
@@ -374,7 +396,7 @@ built-in checks.
 - **The registry is a core of its own, and so is each check.** The registry holds what
   checks share and reaches each one through `Check`, a driven port with one implementation
   for each built-in check. A check keeps its settings, its loading and its rule in one small
-  core that depends on nothing else, so it reads whole, cannot reach into another check and
+  core that depends on no other core, so it reads whole, cannot reach into another check and
   can be used without Continual. Adding one touches its own two crates and one line of the
   composition root. The price is two crates for every rule, built and published with the
   rest. Rejected: a use case that calls each check by name, beside a configuration adapter
@@ -386,8 +408,15 @@ built-in checks.
 - **Each core declares the ports it needs, with only the operations it asks.**
   `LanguageSyntax` is a small trait in each check core that reads source, and the `rust`
   adapter implements them all. A check core then depends on nothing it does not use, and a
-  new fact for one check changes one core. Rejected: one wide port shared by every check,
-  which needs a crate that every check core depends on (H4).
+  new fact for one check changes one core. Rejected: one wide port shared by every check, in
+  a crate that every check core depends on. A library crate holds data and no port (H6), and
+  a new fact for one check would change a trait that every check sees.
+- **A layer can forbid interfaces.** Continual's library crates declare no trait, so that no
+  port lives in one, and this repository's `arch.toml` becomes the architecture check's
+  settings, which then have to say so. The key speaks of interfaces, a generic concept that
+  each language adapter fills in, as it fills in imports. Rejected: a key that forbids
+  `trait` by name, which fits one language; and leaving the rule out of the built-in check,
+  which would drop a rule `cargo xtask arch` holds on the day the built-in check takes over.
 - **A bridge reads a check's settings from located values.** The shape of a check's settings
   is part of how `continual.toml` is written, so the bridge rejects an unknown key or a
   wrong type (V1), and the check core rejects a value that breaks its rule, such as a layer
@@ -426,9 +455,23 @@ built-in checks.
   port of that core, which the `context` adapter answers with the `regex` crate, a third
   party to the core (P4). Every core then keeps an empty allow-list, so the architecture
   check needs no allow-list for one unit of a layer, and the next thing a core needs from a
-  library has a place to go. Rejected: `regex` on the commit-messages core's allow-list in
-  `arch.toml`, which makes one core the exception among cores that allow nothing; and
-  compiling patterns in the configuration adapter, which would tie the check to
+  third-party library has a place to go. Rejected: `regex` on the commit-messages core's
+  allow-list in `arch.toml`, which makes one core the exception among cores that allow
+  nothing; and compiling patterns in the configuration adapter, which would tie the check to
   `continual.toml`.
 - **Attribution is on by default.** A repository that wants AI attribution in its history says
   so with `attribution = false`.
+
+## Open questions
+
+- Whether languages get a registry of their own, as checks have: a core that holds the
+  language adapters and says which one reads a file. Today each check core that reads source
+  text holds one `LanguageSyntax` implementation for each language and chooses among them by
+  a file's extension. No ticket decides it yet.
+- Where a finding of the commit-messages check is. A `Finding` is a location, a file and a
+  line, with a message ([Workspace](workspace.md#library-crates)), and a message in a commit
+  range or a pull request's title is in no file. A type of the library crate changes only by
+  adding (H8), so the first task that declares `Finding` settles its shape with the
+  contributor before it does:
+  [Run checks through a registry](../tickets/first-release/3-built-in-checks/run-checks-through-a-registry.md)
+  or [Check comments in Continual](../tickets/first-release/3-built-in-checks/check-comments-in-continual.md).

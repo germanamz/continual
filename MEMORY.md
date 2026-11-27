@@ -14,13 +14,18 @@ a log of what a session did.
 - When they ask for the page to follow a change, read the published page, edit that copy and
   publish it to the same link. Its build-order figure quotes each story's tasks and points, so
   recount them when tickets change. An agent can answer or resolve a comment thread only
-  after the contributor sends it to Claude.
+  after the contributor sends it to Claude. The page does not show library crates yet:
+  neither the role, nor the library-crates story, which is story 1 of the epic and moved
+  every later story up by one, nor the two tasks that came with it in the built-in checks
+  story.
 - An example states its setup before the point it makes, on the page and in the documents.
-- An agent filled in some parts of the design from a short answer, and the contributor saw
-  them only in a summary: one future for each entry, asynchronous ports down to those that
-  read the repository, the `Timer` port, how batches run, and the composition root handing
-  the approval label to the gate. A task that finds one of them wrong stops and reports it,
-  and need not take it for the contributor's own choice.
+- An agent filled in some parts of the design from a short answer, and the contributor has
+  not confirmed them one by one: one future for each entry, asynchronous ports down to those
+  that read the repository, the `Timer` port, how batches run, the composition root handing
+  the approval label to the gate, the name of the first library crate
+  (`continual-vocabulary`), the `interfaces = false` key of the architecture check, and what
+  counts as a backwards compatible change to a library crate (H8). A task that finds one of
+  them wrong stops and reports it, and need not take it for the contributor's own choice.
 
 ## Tickets and Tusk
 

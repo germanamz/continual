@@ -138,8 +138,8 @@ its design and does not repeat them.
   one line per tool-checked rule, and a single `IMPORTANT`, on the review gate (D18).
   `CLAUDE.md` imports it and adds what is specific to Claude Code.
 - The path-scoped rules in `.claude/rules/` load when an agent touches matching files:
-  `core.md` for the cores, `adapters.md` for adapters and binaries, `tests.md` for tests and
-  `docs.md` for `docs/` and `tickets/`.
+  `core.md` for the cores, `libraries.md` for library crates, `adapters.md` for adapters and
+  binaries, `tests.md` for tests and `docs.md` for `docs/` and `tickets/`.
 - The `placing-a-change` skill holds the placement procedure with worked examples, and the
   workflows for adding a driven port and for swapping a technology.
 
@@ -160,7 +160,7 @@ without blocking.
   tracked Rust or TOML files have uncommitted changes. A second stop in the same turn goes
   through, so the agent can stop and report a failure.
 
-> Planned: [Check Continual with a pinned release](../tickets/first-release/7-self-hosting/story.md)
+> Planned: [Check Continual with a pinned release](../tickets/first-release/8-self-hosting/story.md)
 
 These scripts are replaced by Continual's own [harness mod](harness.md), installed with
 `continual install claude` and configured in `continual.toml`, once a pinned release holds

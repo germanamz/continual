@@ -3,7 +3,7 @@ type: ticket
 title: Design library crates that cores share
 points: 2
 priority: high
-status: pending
+status: completed
 ---
 
 # Design library crates that cores share
@@ -21,8 +21,9 @@ itself.
 
 ## Design
 
-- The open question in [Workspace: open questions](../docs/workspace.md#open-questions), and
-  the decisions "Several small cores, joined by bridges" and "Cores share no crate" in
+- The open question on library crates in Workspace, answered in
+  [Workspace: library crates](../docs/workspace.md#library-crates), and the decisions
+  "Several small cores, joined by bridges" and "Cores share no crate" in
   [Workspace: decisions](../docs/workspace.md#decisions), which this spike reopens.
 - Rules B1, B7, H1 and H4 in [CONVENTIONS.md](../CONVENTIONS.md#cores-h).
 - The `arch` paragraph in
