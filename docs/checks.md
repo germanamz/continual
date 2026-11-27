@@ -85,7 +85,9 @@ This document describes how the checks work and why they are built this way.
   and product crates do not depend on tooling. Every crate sets `[lints] workspace = true`. As
   a second layer behind the clippy lists, it parses every core's sources with `syn` and
   rejects any path under `std::fs`, `std::net`, `std::env`, `std::process`, `std::io` or
-  `std::thread`.
+  `std::thread`. A finding about a crate's dependencies or lints names the crate's manifest,
+  relative to the workspace root and written with `/` on every platform, as the paths of the
+  source files are.
 - **`guard`** compares the working tree, untracked files included, with its merge base against
   `--base` (default `origin/main`). It reports existing tests changed: a `#[test]` function
   deleted, renamed, given `#[ignore]` or `#[should_panic]`, or changed in any token
