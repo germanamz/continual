@@ -56,8 +56,9 @@ Work that is dropped loses its ticket and its planned markers in the same change
   more becomes a story, split into tasks, and carries no points itself; its size is the sum of
   its tasks. Each task is workable on its own, as K9 defines it. `tickets/README.md` gives a
   guide to what each size usually holds.
-- Every agent session starts with the vision and the list of open tickets (the `open-tickets`
-  alias).
+- Every agent session starts with the vision, the memory note and the tasks that are ready to
+  start (the `ready-tickets` alias): the tasks that no open ticket blocks, on the task itself
+  or on its story. The `open-tickets` alias lists every ticket not yet completed.
 - `tusk doctor` reports a ticket outside `tickets/`, a file in `tickets/` that is not a
   ticket, a spec or plan under `docs/`, and a link to a file that no longer exists.
 
@@ -174,7 +175,7 @@ every commit and push then asks ([Harness](harness.md#the-review-gate)).
 - Semantic queries use Ollama with `nomic-embed-text`, with the query and document prefixes and
   the lexical weight of 0.5 taken from Tusk's own measured settings. Without Ollama, structural
   queries still work and semantic ones fail.
-- The session digest pins `VISION.md` and `MEMORY.md` and includes the `open-tickets` alias,
+- The session digest pins `VISION.md` and `MEMORY.md` and includes the `ready-tickets` alias,
   within 9500 bytes.
 - `tusk claude install` writes the Tusk mod to `.claude/skills/tusk/`: the MCP server, a
   session-start hook that injects the digest, and an after-edit hook that lists the pages
@@ -222,6 +223,10 @@ and follow-ups. Rules R3 to R5 govern titles, descriptions and attribution.
   every agent reads, and the digest delivers that file at the start of each session.
   Rejected: an agent's private memory, which other contributors and other harnesses never
   see; and a log with an entry for each session, which grows until nobody reads it.
+- **The digest lists the tasks that are ready to start, not every open ticket.** A session
+  builds one task, so what it needs to see is what can start now, and that list stays short
+  however long the plan is. Rejected: listing every open ticket, which is in alphabetical
+  order, not build order, and was cut off at the digest's size limit.
 - **The stop hook does not run the guard.** A Stop hook can show output only by blocking, and
   guard findings must never block. The guard runs in `cargo xtask ci`, pre-push and CI.
 - **The research doc is linked, not copied**, so there is one live version. `CONVENTIONS.md`

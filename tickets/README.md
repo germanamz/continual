@@ -112,6 +112,7 @@ deleted, along with its planned markers in the design documents.
 | Change its status | `tusk_node_modify` with `status` | `tusk node modify tickets/<path> --prop status=active` |
 | Add a parent or a blocked ticket | `tusk_edge_add` with type `parent` or `blocks` | `tusk edge add --type parent --source tickets/<path> --target tickets/<parent>` |
 | List the open tickets | `tusk_run` with alias `open-tickets` | `tusk run open-tickets` |
+| List the tasks that are ready to start | `tusk_run` with alias `ready-tickets` | `tusk run ready-tickets` |
 | List a ticket's children | `tusk_query` with filter `type=ticket AND parent-> id=tickets/<path>` | `tusk query 'type=ticket AND parent-> id=tickets/<path>'` |
 | List everything under an epic | `tusk_query` with filter `type=ticket AND parent->+ id=tickets/<epic>` and `take: 500` | `tusk query 'type=ticket AND parent->+ id=tickets/<epic>' --take 500` |
 | Find its planned markers | `tusk_query` with filter `names-path=tickets/<path>.md*` | `tusk query 'names-path=tickets/<path>.md*'` |

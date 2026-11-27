@@ -87,10 +87,10 @@ document-prefix = "search_document: "
 lexical-weight = 0.5
 
 # Every session starts with the product picture, what earlier sessions handed on, and the
-# open tickets.
+# tasks that are ready to start.
 [context]
 pinned    = ["VISION", "MEMORY"]
-include   = ["open-tickets"]
+include   = ["ready-tickets"]
 max-bytes = 9500
 
 # Added by `tusk pack add kanban` on 2026-11-06
@@ -195,7 +195,7 @@ filter      = "type=ticket AND parent<- type=ticket AND points=*"
 description = "docs/ holds design documents, one per area, not specs or plans; put the design in the area's document and the work in tickets/"
 filter      = "path=docs/superpowers/** OR path=docs/**/specs/** OR path=docs/**/plans/**"
 
-# The session digest lists the work that is not finished, active tickets first.
+# Every ticket that is not finished, active tickets first.
 [alias.open-tickets]
 command     = "query"
 description = "tickets not yet completed"
@@ -204,4 +204,16 @@ description = "tickets not yet completed"
 filter = "type=ticket AND status!=completed"
 sort   = "+status,+id"
 fields = ["id", "title", "properties.status", "properties.priority"]
+format = "compact"
+
+# The session digest lists the tasks a session can start: those that no open ticket
+# blocks, either the task itself or its story (see tickets/README.md).
+[alias.ready-tickets]
+command     = "query"
+description = "tasks that no open ticket blocks"
+
+[alias.ready-tickets.args]
+filter = "type=ticket AND points=* AND status!=completed AND NOT blocks<- status!=completed AND NOT parent-> blocks<- status!=completed"
+sort   = "+status,+id"
+fields = ["id", "title", "properties.status", "properties.points"]
 format = "compact"
