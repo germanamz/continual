@@ -1,9 +1,9 @@
 //! The guard: changes that a contributor must approve.
 //!
-//! It reports edits to existing tests, changes to gate configuration, gate code and
-//! rule text, lint-table changes and new `#[expect]` suppressions. Locally it only
-//! warns, and the agent stops and reports; in CI it fails until a contributor adds
-//! the [`APPROVAL_LABEL`] to the pull request.
+//! It reports edits to existing tests, changes to gate configuration, gate code,
+//! rule text and library crates, lint-table changes and new `#[expect]`
+//! suppressions. Locally it only warns, and the agent stops and reports; in CI it
+//! fails until a contributor adds the [`APPROVAL_LABEL`] to the pull request.
 
 pub mod protected;
 pub mod tests_diff;
