@@ -1,6 +1,6 @@
 # Harness
 
-> Planned: [Hold the review gate in the Claude Code mod](../tickets/first-release/4-claude-code-mod/story.md)
+> Planned: [Hold the review gate in the Claude Code mod](../tickets/first-release/5-claude-code-mod/story.md)
 
 How Continual plugs into an agent harness: Claude Code, the only harness planned. The harness
 mod formats

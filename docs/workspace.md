@@ -7,8 +7,8 @@ know where code lives. Where a particular change goes is decided by the placemen
 
 ## Concepts
 
-Core, driven port, driving port, adapter, bridge and composition root mean what the
-[vocabulary](../CONVENTIONS.md#2-vocabulary) says. Domain terms such as check, check name,
+Core, driven port, driving port, adapter, bridge, library crate and composition root mean
+what the [vocabulary](../CONVENTIONS.md#2-vocabulary) says. Domain terms such as check, check name,
 finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-glossary).
 
 ## Behaviour
@@ -48,14 +48,15 @@ dependencies (none yet) and the couplings allowed between adapters (none yet).
 
 ### Planned crates
 
-> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/2-pipeline/story.md)
 
-> Planned: [Run the built-in checks in Continual](../tickets/first-release/2-built-in-checks/story.md)
+> Planned: [Run the built-in checks in Continual](../tickets/first-release/3-built-in-checks/story.md)
 
-> Planned: [Hold the review gate in the Claude Code mod](../tickets/first-release/4-claude-code-mod/story.md)
+> Planned: [Hold the review gate in the Claude Code mod](../tickets/first-release/5-claude-code-mod/story.md)
 
 Continual's rules are split into cores. Each is a crate under `crates/cores/<name>/` that
-holds one unit of logic and depends on no other workspace crate, another core included.
+holds one unit of logic and depends on no other core. Of the workspace's crates it may use
+only [library crates](#library-crates).
 The registry core is there already and holds `CheckName`, and so is the engine core, which
 holds the step definitions of its `workspace` module. The rest of both and the other cores
 are planned.
@@ -84,7 +85,8 @@ the ports that talk to a technology:
 | `continual-context` | `crates/adapters/context/` | The execution context: the engine's `Timer` and the commit-messages core's `Patterns` | [Built-in checks](built-in-checks.md#ports-and-adapters) |
 
 A core that needs another core declares a driven port too, and a bridge answers it by calling
-the other core. A bridge depends on the two cores it joins and on nothing else:
+the other core. A bridge depends on the two cores it joins and, library crates aside, on
+nothing else:
 
 | Bridge | Path | Implements | By calling | Designed in |
 | --- | --- | --- | --- | --- |
@@ -110,6 +112,55 @@ and every language adapter is compiled into the one binary
 
 Each core arrives with an allow-list of its own in `arch.toml` and a `clippy.toml` like the
 registry's ([Checks](checks.md#cargo-xtask-checks)).
+
+### Library crates
+
+> Planned: [Share data between cores in library crates](../tickets/first-release/1-library-crates/story.md)
+
+A library crate is a third kind of product crate, beside the cores and the adapters. It holds
+data that several cores mean the same way, so each of them uses one definition instead of
+declaring a copy that a bridge maps. It is no part of the hexagon, neither a port nor an
+adapter: to a crate that uses it, it is a dependency, as the standard library is. Library
+crates live under `crates/libraries/<name>/`. Cores, adapters and composition roots may all
+depend on one, and it depends on no workspace crate.
+
+One library crate is planned, `continual-vocabulary` in `crates/libraries/vocabulary/`:
+
+| It holds | What it is | Arrives with |
+| --- | --- | --- |
+| `Location` and `Located<T>` | Where something is written, a file and a line, and a value with the place it is written. Plain records; a `Location` prints as `file:line`. | [Share locations in the first library crate](../tickets/first-release/1-library-crates/share-locations-in-the-first-library-crate.md), which moves them out of the engine |
+| `Name` | The name rule: the lowercase, hyphenated text that names a step, a check, a pipeline or a package, with the one error enum that says why a text is not a name. A value object. | [Build step names on a shared name rule](../tickets/first-release/1-library-crates/build-step-names-on-a-shared-name-rule.md), then [Build check names on the shared name rule](../tickets/first-release/1-library-crates/build-check-names-on-the-shared-name-rule.md) |
+| `Finding` | One violation, as a location and a message, which prints as `path:line: message`. A plain record. | The first task that reports one: [Run checks through a registry](../tickets/first-release/3-built-in-checks/run-checks-through-a-registry.md) or [Check comments in Continual](../tickets/first-release/3-built-in-checks/check-comments-in-continual.md) |
+| Located values | A check entry's settings and the gate's sections of the configuration, as values that each carry their location, which nothing reads before the check or the gate they belong to. Plain records. | The first task that carries them: [Run check steps](../tickets/first-release/3-built-in-checks/run-check-steps.md), [Run checks through a registry](../tickets/first-release/3-built-in-checks/run-checks-through-a-registry.md) or [Join the gate to the engine](../tickets/first-release/5-claude-code-mod/join-the-gate-to-the-engine.md) |
+
+- **What it may hold** (H6). Plain data records, and value objects whose invariant is about
+  the value alone, that two or more cores speak, in the code or in these documents. It
+  holds nothing that only one core owns: the engine's `ProblemKind` names the engine's own
+  rules, so it stays in the engine, and so does `Problem`, which pairs it with a `Location`.
+  It declares no trait and holds no use case, so every port stays in a core, with only the
+  operations that core asks (P7).
+- **Its limits** (H7). A library crate keeps every limit of a core: no technology
+  dependency, no I/O, clock, environment, process or randomness, no `serde`, an allow-list
+  of its own in `arch.toml`, a `clippy.toml` of its own and the cores' coverage minimum. It
+  depends on no workspace crate, another library crate included.
+- **How it changes** (H8). Every change to a library crate is a guarded change, so what the
+  cores share changes only with a contributor's approval. A change is also backwards
+  compatible: it adds, and never removes, renames or alters what a crate already uses. Cores
+  build these records field by field and match their enums without a catch-all arm, so a new
+  field on a record or a new variant of an enum is not backwards compatible. Such a change
+  arrives as a new item beside the old one, the crates that need it move to it, and the old
+  item goes in a planned cleanup, a ticket of its own, once nothing uses it.
+- **Each kind of name stays a type of its own.** `StepName` in the engine and `CheckName` in
+  the registry are each built on `Name`, so the rule and its error have one definition and a
+  step name still cannot stand in for a check name.
+- **Bridges hand library types on.** A library type crosses a bridge unchanged, as a `String`
+  does. A bridge still translates what is each core's own: the inputs and answers of the
+  port it implements, error enums, outcomes, a name parsed from text, and settings read from
+  located values (H3). The registry's label is its own as well: it pairs a `Finding` with the
+  `CheckName` of the check that reported it.
+
+How the checks hold these rules is in [Checks](checks.md#library-crates), and how the crate
+is published in [Distribution](distribution.md#design).
 
 ### Repository layout
 
@@ -165,17 +216,57 @@ configuration.
 - **Several small cores, joined by bridges.** Each unit of logic with rules of its own is a
   core: the engine, the check registry, each built-in check and the gate. A core is short
   enough to read whole, its boundary is a crate, which the compiler and `cargo xtask arch`
-  hold, and it can be lifted out and used without the others. The price is the number of
-  crates, about twenty, built, versioned and published together. Rejected: one core with a
+  hold, and it can be lifted out and used without the other cores, with only the library
+  crates it speaks. The price is the number of crates, about twenty, built, versioned and
+  published together. Rejected: one core with a
   feature module for each unit, whose boundaries are module visibility that only review
   holds and whose crate grows with every rule; and a core for each of the engine's feature
   modules, since `workspace`, `pipeline` and `events` share one model, the validated graph,
   and a boundary between them would only map that graph back and forth (H5).
-- **Cores share no crate.** Each core declares the types its ports speak, and a bridge maps
-  one core's types to the other's, so no core changes because another did (H4). A step's name
-  in the engine and a check's name in the registry follow the same rules and are separate
-  types. Rejected: a shared crate of common types such as findings, names and located values,
-  which every core would depend on and none could change alone.
+- **Cores share library crates, and nothing else.** Data that several cores mean the same
+  way has one definition, in a [library crate](#library-crates) that each of them depends on
+  (H4, H6). Take the comments check's finding at `src/lib.rs:12`. With a finding type in every
+  core, the comments core declares its own, its bridge copies it field by field into the
+  registry's, and every other check does the same: six finding types, with two copies of the
+  located values and two of the name rule beside them, kept alike by review alone. With a
+  library crate there is one `Finding`, and the bridges hand it on. A core still shares no
+  rule, no port and no error with another core, and still asks another core through a port
+  and a bridge. The price is a crate that most cores depend on and that a core lifted out
+  brings along. Rejected: every core declaring its own copies, for the duplication above; and
+  stamping each core's copy from one macro, whose crate every core would share anyway and
+  whose copies stay separate types that bridges still map.
+- **A library crate holds data and the invariants of that data.** That is enough to hold the
+  name rule once, and narrow enough to keep every rule a core owns in that core (Q16).
+  Rejected: plain data records only, which leaves the name rule written in two cores; port
+  traits that several cores declare alike, such as `SourceTree` and `LanguageSyntax`, which
+  would give each core the operations of all of them and change a trait every core sees for
+  one core's new fact; and anything two cores use, which lets one core's rules in and takes
+  the boundaries between cores out.
+- **A library crate keeps a core's limits and depends on no workspace crate.** Library crates
+  are the foundation every core stands on, so they carry no technology and do not build on
+  each other: a dependency between two of them would let a change to one break the other and
+  every core above both. A finding holds a location, so the two live in one crate. Rejected:
+  library crates that depend on library crates; only cores depending on them, with each core
+  re-exporting what its ports speak, which gives a bridge one type under two paths; and limits
+  looser than a core's, which would hand a technology to every core at once.
+- **Every change to a library crate is guarded and backwards compatible.** Take a `Finding`
+  that the registry, five check cores and their bridges build, and a guard task that wants
+  findings that only warn. A `severity` field on `Finding` would change every core that builds
+  one, though only the guard asked. So a library crate changes only with a contributor's
+  approval and only by adding, an old shape goes only in a planned cleanup, and what one
+  core's rule needs stays in that core, as a check's answer says that its findings only warn.
+  Rejected: holding what a library crate may hold by review alone, which erodes one
+  reasonable change at a time; and shapes frozen for good, which leave no way to tidy up.
+- **One library crate, split only when a core needs it split.** `continual-vocabulary` holds
+  all that the cores share, and splits when a core would depend on it for nothing that core
+  uses. Rejected: a narrow crate for each concept, which publishes three or more crates where
+  one will do and needs library crates that depend on each other.
+- **One name rule, and a type for each kind of name.** A step name, a check name, a pipeline
+  name and a package name follow one rule, `Name`, with one error enum whose messages name no
+  kind of name. Each core wraps it in types of its own, so a step name is never taken for a
+  check name. Rejected: each core keeping an error enum and messages of its own over the
+  shared rule, which leaves most of the duplicate in place; one bare `Name` for every kind of
+  name; and leaving the rule written in both cores.
 - **One bridge crate for each pair of cores.** A bridge can reach only the two cores it joins,
   so a new check adds its core and its bridge and changes no other crate but the composition
   root. Rejected: one crate that holds every check's bridge, which could reach every check
@@ -197,12 +288,13 @@ configuration.
   root, where `unsafe` code is forbidden; a runtime that executes a run's futures, in the
   composition root; and regular expressions in the execution context, with globs beside them
   if matching them needs a library.
-- **Cores get libraries through the execution context.** A core that needs what a library
-  does, as the commit-messages core needs regular expressions, declares a port for it, and
-  the `context` adapter answers. Every core's allow-list stays empty, and the one object the
-  composition root builds for a run is where the next such need goes
+- **Cores get third-party libraries through the execution context.** A core that needs what
+  a third-party library does, as the commit-messages core needs regular expressions, declares
+  a port for it, and the `context` adapter answers. Every core's allow-list stays empty, and
+  the one object the composition root builds for a run is where the next such need goes
   ([Built-in checks](built-in-checks.md#decisions)). Rejected: a crate that every core
-  depends on and receives when it runs, which cores would share (H4).
+  depends on and receives when it runs, which would hold a port or a technology, and a
+  library crate holds neither (H6, H7).
 - **One tokenizer of Continual's own splits command lines.** A step's `run` and the command
   an agent wants to run are each one line of text whose quotes must mean the same thing, so
   one small crate reads both: words, quoted text kept together, and shell operators as
@@ -216,12 +308,3 @@ configuration.
 - **clap with the derive feature**, since every future command needs argument parsing.
 - **Smoke tests run the built binary** through `env!("CARGO_BIN_EXE_continual")` and
   `std::process::Command`, so they need no extra test dependency.
-
-## Open questions
-
-- Whether cores may share library crates: crates that are neither cores nor adapters and
-  hold data structures several cores use, such as a location in a configuration file and
-  the problem or finding reported there. Today each core declares its own and a bridge maps
-  between them (H4).
-  [Design library crates that cores share](../tickets/design-library-crates-that-cores-share.md)
-  decides it.

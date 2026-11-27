@@ -34,7 +34,7 @@ Step, required entry, pipeline, event, package, check and tool mean what the
 
 ### `continual.toml`
 
-> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/2-pipeline/story.md)
 
 A repository with one package needs only the root configuration. Steps say what runs;
 pipelines say which steps run, in what order:
@@ -136,7 +136,7 @@ reported alone, before any of these.
 
 ### Commands
 
-> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/2-pipeline/story.md)
 
 A tool step's `run` is split into words the way a shell splits them, with quotes grouping
 words, but no shell runs it. There are no pipes, redirections, `&&`, globbing or variable
@@ -150,7 +150,7 @@ missing and prints the step's `install` command, or says that the step has none.
 
 ### Timeouts
 
-> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/2-pipeline/story.md)
 
 A hung step must never hold up an agent's turn or a CI job until something outside Continual
 gives up, so every step runs with a time limit, a tool step and a check step alike.
@@ -179,7 +179,7 @@ gives up, so every step runs with a time limit, a tool step and a check step ali
 
 ### Placeholders
 
-> Planned: [Run steps on git and agent events](../tickets/first-release/3-events/story.md)
+> Planned: [Run steps on git and agent events](../tickets/first-release/4-events/story.md)
 
 A placeholder is a whole word in `run`. Continual expands it before the tool starts:
 
@@ -222,7 +222,7 @@ needs one.
 
 ### Pipelines
 
-> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/2-pipeline/story.md)
 
 `continual run <pipeline>...` runs the named pipelines, each after the pipelines it depends
 on. A pipeline starts with its starting entry; every later entry starts when every entry it
@@ -260,7 +260,7 @@ steps on a shorter path.
 
 ### Output and exit codes
 
-> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/2-pipeline/story.md)
 
 Continual passes each tool's output through as the tool writes it and judges the tool by its
 exit code alone. It never parses, buffers or reinterprets a tool's output, and thresholds such
@@ -290,7 +290,7 @@ their own incremental state, such as cargo's `target/` or `tsc --incremental`.
 
 ### Packages
 
-> Planned: [Run steps across a repository's packages](../tickets/first-release/5-packages/story.md)
+> Planned: [Run steps across a repository's packages](../tickets/first-release/6-packages/story.md)
 
 In a monorepo, the root configuration lists the packages, and each package directory holds a
 package configuration that extends the root:
@@ -372,7 +372,7 @@ other packages run first either way.
 
 ### Events
 
-> Planned: [Run steps on git and agent events](../tickets/first-release/3-events/story.md)
+> Planned: [Run steps on git and agent events](../tickets/first-release/4-events/story.md)
 
 An event is a moment at which a repository wants some pipelines to run. `[events]` maps each
 one to its pipelines:
@@ -424,7 +424,7 @@ appears under its new name.
 
 ### The engine core
 
-> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/2-pipeline/story.md)
 
 The pipeline's decisions are code in the engine core, `continual-engine`, one of Continual's
 cores ([Workspace](workspace.md#planned-crates)), in feature modules:
@@ -439,17 +439,19 @@ cores ([Workspace](workspace.md#planned-crates)), in feature modules:
   too ([Built-in checks](built-in-checks.md#the-registry-core)). It keeps `[review_gate]` and
   `[[blocked_commands]]` as located values that only the gate interprets
   ([Harness](harness.md#design)). Step, pipeline and package names are value objects of the
-  engine's own, which follow the rules a check name follows
-  ([Workspace](workspace.md#decisions)).
+  engine's own, each a type of its own over the one name rule that a check name follows too.
+  The engine writes that rule itself until it moves to the library crate
+  ([Workspace](workspace.md#library-crates)).
 
   A `Workspace` is built from configuration input: plain records that hold each item as
-  written, with its location, a file and a line. The steps arrive by name, so no name can
-  be given twice, a tool step's `run` as a program and its arguments, and a check step's
-  entries in list order, where a step that lists none has no `checks`. Building reports
-  every problem at once instead of stopping at the first (E9): `jobs` and the
-  configuration's `timeout` first, then the steps in the order of their names. Each problem
-  holds what is wrong and the location of the item that is wrong, and prints as
-  `continual.toml:31: message`.
+  written, with its location, a file and a line. A location and a located value mean the
+  same in every core, so those two records move to the library crate as well. The steps
+  arrive by name, so no name can be given twice, a tool step's `run` as a program and its
+  arguments, and a check step's entries in list order, where a step that lists none has no
+  `checks`. Building reports every problem at once instead of stopping at the first (E9):
+  `jobs` and the configuration's `timeout` first, then the steps in the order of their
+  names. Each problem holds what is wrong and the location of the item that is wrong, and
+  prints as `continual.toml:31: message`.
 - **`pipeline`**: a `Run` plans the pipelines asked for and the pipelines they depend on, then
   works as a state machine: it says which entries are ready, in the fixed order the
   [pipelines](#pipelines) section gives, records each outcome, skips the
@@ -498,9 +500,9 @@ bridge:
 
 ### Ports and adapters
 
-> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/2-pipeline/story.md)
 
-> Planned: [Run steps on git and agent events](../tickets/first-release/3-events/story.md)
+> Planned: [Run steps on git and agent events](../tickets/first-release/4-events/story.md)
 
 | Port | What the engine asks | Adapter |
 | --- | --- | --- |
@@ -537,9 +539,9 @@ bridge:
 
 ### Composition root
 
-> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/1-pipeline/story.md)
+> Planned: [Run a repository's steps from continual.toml](../tickets/first-release/2-pipeline/story.md)
 
-> Planned: [Run steps on git and agent events](../tickets/first-release/3-events/story.md)
+> Planned: [Run steps on git and agent events](../tickets/first-release/4-events/story.md)
 
 `crates/continual/src/main.rs` reads the current directory, the CPU count, the platform's
 command-line limit and the binary's version and builds the adapters and the cores, each after
@@ -650,8 +652,8 @@ on that runtime, and maps the verdict to the exit code (A2).
 - What a `run` that holds no word is, such as `run = ""`. The engine's configuration input
   holds a tool step's command as a program and its arguments, so a `run` without a program
   cannot reach the engine as a command, and the configuration adapter meets it first, when
-  it splits `run` ([Read continual.toml](../tickets/first-release/1-pipeline/read-continual-toml.md)).
+  it splits `run` ([Read continual.toml](../tickets/first-release/2-pipeline/read-continual-toml.md)).
 - Which task gives the engine a step's `install`. The step definitions hold `run`, `checks`
   and `timeout`, and no ticket of the
-  [pipeline story](../tickets/first-release/1-pipeline/story.md) lists `install` among the
+  [pipeline story](../tickets/first-release/2-pipeline/story.md) lists `install` among the
   behaviours it adds to the engine.

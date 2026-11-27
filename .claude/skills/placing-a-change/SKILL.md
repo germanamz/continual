@@ -29,6 +29,9 @@ git, the time, another core's answer). Look for a driven port of that core whose
 already covers it and add an operation there. Otherwise create one: a trait in that core named
 for the purpose (`ToolRunner`, not `StdProcessRunner`), documented in full (P5), justified by
 an actor outside the core (P4). Never depend on the other core's crate or copy its rule (H4).
+Data that both cores mean the same way, with no rule of either, is not mapped: it is a
+library crate's (H6). Adding to a library crate is a guarded change (H8), and a
+stop-and-report choice when no ticket names what is added.
 Then follow "Add a driven port and its adapter" below; when the actor is another core, the
 adapter is a bridge.
 
@@ -86,7 +89,7 @@ in its own crate.
    `[dev-dependencies]` and run it against the real adapter.
    A bridge is the same crate with a second dependency: the core it calls. It is named for the
    two cores, the one that asks first (`engine-registry`), and it only maps types and errors
-   between them (H3).
+   between them, handing a library crate's types on unchanged (H3).
 5. Wire it in the composition root: each core after the driven adapters it needs, a bridge
    after the core it calls, and the driving adapters last (B5).
 6. Run `cargo xtask arch`: it confirms the new crate is classified and depends only on cores.

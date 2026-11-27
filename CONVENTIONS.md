@@ -26,12 +26,13 @@ anyone who cannot open the doc.
 
 | Term | Meaning in Continual |
 | --- | --- |
-| Core | A crate that holds one unit of Continual's rules and no technology: no I/O, clock, environment or randomness. No core depends on another (H1). Today there are two, `crates/cores/engine` and `crates/cores/registry`; the planned cores are in section 3. |
+| Core | A crate that holds one unit of Continual's rules and no technology: no I/O, clock, environment or randomness. No core depends on another (H1), and cores share only library crates (H4). Today there are two, `crates/cores/engine` and `crates/cores/registry`; the planned cores are in section 3. |
 | Port | A conversation between a core and one actor outside it, named for its purpose in that core's domain language. |
 | Driven port | What a core needs from outside, such as running a tool, reading the repository's files or asking another core. A trait declared in the core that needs it and implemented by an adapter. |
 | Driving port | What the outside asks a core to do. A concrete core type or function that driving adapters call directly. |
 | Adapter | A crate under `crates/adapters/`, or the CLI module, that translates between a port and one technology, or between a port and another core. |
 | Bridge | An adapter that joins two cores: it implements a driven port of one by calling the driving port of the other, and translates between their types (H2, H3). |
+| Library crate | A crate under `crates/libraries/` that holds data several cores mean the same way: plain records, and value objects with the invariants of their own value. It is neither a port nor an adapter: to a crate that uses it, it is a dependency (H6 to H8). None exists yet; the first is planned in [Workspace](docs/workspace.md#library-crates). |
 | Composition root | A binary's `main.rs` (`continual`): the only code that builds adapters and hands them to the cores. |
 | Actor | Anything outside a core: a person, an agent, the file system, git, an external tool, a test, another core. |
 | Fake | A working, simplified implementation of a driven port, such as an in-memory source tree. |
@@ -76,6 +77,8 @@ reading files and configuration, asking git and parsing each language's source.
 The rules are split into cores, each one unit of logic small enough to read and test whole
 (H1). No core depends on another. A core that needs another states the need as a driven port
 in its own words, and a bridge implements that port by calling the other core (H2 to H4).
+Data that several cores mean the same way, such as where a finding is, has one definition in
+a library crate that each of them depends on (H6 to H8).
 Today there are two: `crates/cores/registry`, which holds the check name, and
 `crates/cores/engine`, which holds a workspace's step definitions. The rest of both and the
 other cores below are planned, and [Workspace](docs/workspace.md#planned-crates) lists their
@@ -120,6 +123,8 @@ Crates by role:
 - `crates/cores/<name>`: the cores. Every crate there is a core, with an allow-list of its
   own in `arch.toml`. `crates/cores/engine` and `crates/cores/registry` are the cores so far,
   and the others are planned. Modules are organised by feature inside a core.
+- `crates/libraries/<name>`: the library crates (none yet), each with an allow-list of its own
+  in `arch.toml`.
 - `crates/continual`: the composition root, one per deployable.
 - `crates/adapters/<name>`: adapters, bridges among them (none yet).
 - `xtask`: repository tooling. Product crates never depend on it.
@@ -136,9 +141,9 @@ Crates by role:
 | B4 | Adapters do not depend on each other, except couplings declared in `arch.toml` with a reason. | A | `cargo xtask arch` |
 | B5 | Each deployable has one composition root, the only code that constructs driven adapters (tests excepted). It builds each core after the driven adapters that core needs, a bridge after the core it calls, and the driving adapters last. | A | `cargo xtask arch` (only roots depend on adapters) |
 | B6 | Everything between a core and the outside passes through a port: files, environment, network, processes, threads, clock, randomness and other cores. | A | core `clippy.toml` disallowed lists; `cargo xtask arch` source scan |
-| B7 | Port signatures use the declaring core's types only. No process, git-library, parser or framework types, and no other core's types. | A | follows from B1 |
+| B7 | Port signatures use only the declaring core's types and the types of library crates (H6). No process, git-library, parser or framework types, and no other core's types. | A | follows from B1 |
 | B8 | A core does not reach through a port's return value into technology objects. | A | follows from B7; review |
-| B9 | Every new boundary gets an `arch.toml` entry; a new core's is its allow-list. The arch check fails when a configured crate is missing, when a core has no allow-list or when the cores directory holds no crate, so it cannot pass vacuously. | A | `cargo xtask arch` |
+| B9 | Every new boundary gets an `arch.toml` entry; a new core's is its allow-list, and so is a new library crate's. The arch check fails when a configured crate is missing, when a core has no allow-list or when the cores directory holds no crate, so it cannot pass vacuously. | A | `cargo xtask arch` |
 | B10 | Existing violations, if there ever are any, are frozen in `arch.toml` with a reason, never hidden by disabling a rule. No new ones. | A | review; `cargo xtask guard` |
 
 ### Cores (H)
@@ -147,9 +152,12 @@ Crates by role:
 | --- | --- | --- | --- |
 | H1 | Continual's rules are split into cores, each one unit of logic with rules of its own that can be read and tested whole. No core depends on another core. | A | `cargo xtask arch` (a core depends on no workspace crate) |
 | H2 | A core that needs another core states the need as a driven port in its own domain language (P1, P4). A bridge implements the port by calling the other core's driving port. | A | `cargo xtask arch`; review |
-| H3 | A bridge joins two cores and only translates between their types and errors (A1). It is named for the two cores, the one that asks first: `engine-registry`. | A | review |
-| H4 | Cores share no crate. Each core declares the types its ports speak, and a bridge maps one core's types to the other's. A rule stays in the core that owns it (Q16): another core asks for its result through a port and never copies it. | A | `cargo xtask arch`; review |
+| H3 | A bridge joins two cores and only translates between their types and errors (A1). A library crate's type crosses it unchanged, as a `String` does. It is named for the two cores, the one that asks first: `engine-registry`. | A | review |
+| H4 | Cores share only library crates (H6). Each core declares every other type its ports speak, and a bridge maps one core's types to the other's. A rule stays in the core that owns it (Q16): another core asks for its result through a port and never copies it. | A | `cargo xtask arch`; review |
 | H5 | A unit becomes a core of its own when it has rules of its own and a narrow conversation with the rest. Parts that share one model stay in one core as feature modules (W8), as the engine's workspace, pipeline and events do. Say which in the PR. | J | review |
+| H6 | A library crate holds data that two or more cores mean the same way, in the code or in the design documents: plain data records, and value objects whose invariant is about the value alone (Q13). It holds nothing that only one core owns, whether a rule, an error or a concept, and it declares no trait and holds no use case, so ports stay in the cores (P7). It is neither a port nor an adapter: to a crate that uses it, it is a dependency, as the standard library is. | A | review; `cargo xtask arch` once it knows library crates ([Checks](docs/checks.md#library-crates)) |
+| H7 | A library crate keeps a core's limits: no technology dependency and no I/O, clock, environment, process or randomness (B1, B6, X1), no `serde` (M4), an allow-list of its own in `arch.toml`, a `clippy.toml` of its own and a core's coverage minimum. It depends on no workspace crate, another library crate included. Cores, adapters and composition roots may depend on it. | A | review; `cargo xtask arch` and `cargo xtask coverage` once they know library crates ([Checks](docs/checks.md#library-crates)) |
+| H8 | Every change to a library crate is a guarded change (R2), and it is backwards compatible: it adds, and never removes, renames or alters what a crate already uses. A change that cannot be, such as a new field on a record, a new variant of an enum or a tighter invariant, arrives as a new item beside the old one. The old one goes in a planned cleanup, a ticket of its own (K7), once nothing uses it. | A | review; `cargo xtask guard` once it knows library crates ([Checks](docs/checks.md#library-crates)) |
 
 ### Ports (P)
 
@@ -196,7 +204,7 @@ Crates by role:
 | Q13 | A core type is either a value object or entity (private fields, behaviour that enforces invariants) or a plain data record (public fields, no business behaviour). Never both. | A | review |
 | Q14 | Choose deliberately between an enum with exhaustive `match` (new operations expected) and a trait (new variants or plugins expected), and say which in the PR. No `_ =>` arms on enums. | J | clippy (`wildcard_enum_match_arm`); review |
 | Q15 | Do not call methods on an entity or service obtained from a collaborator (`a.b().c()`). Same-type builders, value objects and iterator chains are fine. | J | review |
-| Q16 | Each domain fact (rule, constant, validation, mapping) has one authoritative definition, in the core that owns it. | A | review |
+| Q16 | Each domain fact (rule, constant, validation, mapping) has one authoritative definition, in the core that owns it, or in a library crate when several cores mean it the same way (H6). | A | review |
 | Q17 | Do not abstract structurally similar code before its third occurrence, unless it is the same knowledge (Q16). | J | review |
 | Q18 | If a change would add a mode flag or a caller-specific branch to a shared helper, inline the helper back into its callers instead. | J | review |
 | Q19 | Add no trait, parameter, configuration option or extension point that no current use or test exercises. Driven ports are exempt. | A | review |
@@ -321,7 +329,7 @@ These apply once a transactional store or a message broker exists.
 | W4 | Scripts and prototypes skip the hexagon; extract a port when the second adapter or the first fake appears. | J | review |
 | W5 | No hexagons inside hexagons: cores sit side by side and never nest. | A | review |
 | W7 | Do not impose global layers; feature modules inside a core share only genuine domain rules. | A | review |
-| W8 | Crates by role: cores, adapters and composition roots. Modules by feature inside a core; cross-feature calls go through the other feature's public API. | J | review |
+| W8 | Crates by role: cores, library crates, adapters and composition roots. Modules by feature inside a core; cross-feature calls go through the other feature's public API. | J | review |
 
 W6 in the doc is specific to Go and does not apply.
 
@@ -359,7 +367,10 @@ worked examples and the "add a driven port" and "swap a technology" workflows.
    another core's answer). If an existing driven port's conversation covers it, add an
    operation to that port; otherwise create a port named for the purpose (P1, P4) with full
    docs (P5). Then change the contract suite first, then the fake, then the real adapter (T6).
-   When the actor is another core, the adapter is a bridge (H2, H3).
+   When the actor is another core, the adapter is a bridge (H2, H3). Data that both cores
+   mean the same way, with no rule of either, is not mapped: it is a library crate's (H6).
+   Adding to a library crate is a guarded change (H8), and when no ticket names what is
+   added, a stop-and-report choice.
 3. **A new entry point uses existing behaviour** (CLI command, harness hook). It goes
    only in a driving adapter: build a core input, call one core operation, map results and
    errors (A2, E7, V1). Test it through the real binary (T7).
@@ -425,7 +436,7 @@ Change one by PR (section 1).
 | D7 | TDD strictness | Canon TDD: a test list, red before green, the red run observed. Commit order cannot be enforced because commits wait for the review gate. |
 | D8 | Logging | No logging port. Adapters and composition roots log; business observations are domain events if needed. |
 | D9 | Internal core structure | None prescribed beyond feature-first modules. |
-| D10 | Package layout | Crates by role: cores, adapters and composition roots; modules by feature inside a core. |
+| D10 | Package layout | Crates by role: cores, library crates, adapters and composition roots; modules by feature inside a core. |
 | D11 | Cross-aggregate transactions | Not applicable until a transactional store exists. |
 | D12 | Event reliability | Not applicable until a message broker exists. |
 | D13 | Comment policy | Interface docs on all public items and ports, plus the no-comment-blocks rule (C1–C5). |

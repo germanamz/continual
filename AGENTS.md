@@ -30,6 +30,8 @@ fixes for PR comments.
 - `crates/cores/<name>/`: the cores. Every crate there is a core, with an allow-list of its
   own in `arch.toml`. `engine` and `registry` are the cores so far: domain types and port
   traits; no I/O. The planned cores go beside them (`docs/workspace.md`).
+- `crates/libraries/<name>/`: library crates, data that several cores mean the same way (none
+  yet; planned in `docs/workspace.md`).
 - `crates/continual/`: the CLI binary. `main.rs` is the composition root, `cli.rs` the driving
   adapter.
 - `crates/adapters/<name>/`: adapter crates, bridges among them (none yet).
@@ -40,8 +42,12 @@ fixes for PR comments.
 
 - A core has no technology dependencies and no I/O, clock, environment, process or
   randomness (B1, B6, X1). Checked by `cargo xtask arch` and each core's `clippy.toml`.
-- No core depends on another or shares a crate with one. A core that needs another declares a
-  driven port, and a bridge adapter implements it by calling the other core (H1–H4).
+- No core depends on another, and cores share only library crates. A core that needs another
+  declares a driven port, and a bridge adapter implements it by calling the other core
+  (H1–H4).
+- A library crate holds data several cores mean the same way and nothing only one core owns:
+  no trait, no use case. It keeps a core's limits and depends on no workspace crate. Every
+  change to one is a guarded change and backwards compatible (H6–H8).
 - Driven ports are traits declared in the core that needs them and implemented by adapters.
   Driving adapters call core types directly, without single-implementation traits (B2, B3, P8,
   W2).
@@ -102,6 +108,7 @@ fixes for PR comments.
 - a check fails because of a problem outside the change;
 - a new driven port has no external actor, or it is unclear which actor or which core owns a
   rule;
+- a change would add to a library crate what no ticket names;
 - a dependency or package cannot be verified.
 
 ## Commits and PRs

@@ -110,6 +110,45 @@ This document describes how the checks work and why they are built this way.
 - **`ci`** runs the pipeline. Its step list is data in `xtask/src/pipeline.rs`, so the order,
   the arguments and the required-tool table are tested.
 
+### Library crates
+
+The checks hold a [library crate](workspace.md#library-crates) as they hold a core, and add
+what keeps the role from becoming a way round the boundaries between cores.
+
+> Planned: [Check library crates in the arch check](../tickets/first-release/1-library-crates/check-library-crates-in-the-arch-check.md)
+
+- **`arch`** reads a `[libraries]` table from `arch.toml`, shaped like `[cores]`: the
+  directory that holds the library crates, `crates/libraries`, and under
+  `[libraries.allowed-dependencies]` an allow-list of external crates for each of them, keyed
+  by its package name. The table is absent while the workspace has no library crate. Once it
+  is there, a directory that holds no crate is a finding, and so are a library crate without
+  a list and a list that names no library crate. A library crate depends on no workspace
+  crate, another library crate included, and only on the external crates on its own list,
+  counting normal, dev and build dependencies. A core, an adapter and a composition root may
+  each depend on a library crate, and a core still depends on no other workspace crate. The
+  source scan reads a library crate's sources as it reads a core's.
+
+> Planned: [Forbid traits in library crates](../tickets/first-release/1-library-crates/forbid-traits-in-library-crates.md)
+
+- The source scan also reports a `trait` declared in a library crate, so no port can live in
+  one (P7).
+
+> Planned: [Guard changes to library crates](../tickets/first-release/1-library-crates/guard-changes-to-library-crates.md)
+
+- **`guard`** reports every change under `crates/libraries/` as a change to a gate file, so
+  CI fails until a contributor adds the approval label (H8).
+
+> Planned: [Hold library crates to the cores' coverage](../tickets/first-release/1-library-crates/hold-library-crates-to-the-cores-coverage.md)
+
+- **`coverage`** requires the lines of each library crate at 95% or more, as it does each
+  core's, and takes the library crates from `arch.toml` and `cargo metadata` as it takes the
+  cores.
+
+Each library crate carries a `clippy.toml` like a core's, held by review as a core's is. No
+tool sees whether a change to a library crate is backwards compatible, or whether what it adds
+belongs to one core alone. The guard puts every such change before a contributor, who judges
+both (H6, H8).
+
 ### Tests
 
 The tests run under cargo-nextest. Its `ci` profile in `.config/nextest.toml` turns off
@@ -155,7 +194,7 @@ check, and `pre-push` runs `cargo xtask ci`.
 
 ### Self-hosting
 
-> Planned: [Check Continual with a pinned release](../tickets/first-release/7-self-hosting/story.md)
+> Planned: [Check Continual with a pinned release](../tickets/first-release/8-self-hosting/story.md)
 
 Continual checks its own repository. A root `continual.toml` declares the steps that
 `cargo xtask ci` runs today and a `ci` pipeline that runs them in the same order, every entry
@@ -206,6 +245,22 @@ Continual is built.
   a table for each core, a shape for per-core settings that no core has; one flat list whose
   entries name their core, which never shows a core's empty list; and reading a missing list
   as an empty one, which lets a boundary arrive without a guarded change.
+- **Library crates are a directory in `arch.toml`, with an allow-list for each crate**, as the
+  cores are. The layout then shows a crate's role, and a new library crate always changes
+  `arch.toml`, a guarded file (B9). Rejected: a list of names, as composition roots have,
+  which lets a library crate sit anywhere; and no role at all, with the crate entered on each
+  core's allow-list like an external one, which declares every use and says nothing of what
+  the crate itself may hold or depend on.
+- **A library crate declares no trait.** A port in a library crate would be one that every
+  core shares, and a trait is how a port is written, so the source scan reports the
+  declaration itself. Rejected: leaving it to review, when the scan already reads these files.
+- **Library crates are gates.** `arch` sees where a crate sits, what it depends on and what
+  its sources name. It cannot see whose rule a function is. Suppose the gate needs the
+  engine's reading of `[review_gate]`: moved into a library crate, that reading would reach
+  both cores with no port and no bridge, and break no dependency rule. So every change to a
+  library crate is put before a contributor, like a change to the check configuration.
+  Rejected: the ordinary review of a pull request, where a change to a library crate looks
+  like any other.
 - **Coverage takes the cores from `arch.toml` and `cargo metadata`**, as the arch check does,
   so a core that has no data in the report fails. Rejected: reading the cores from the
   report's paths, which cannot see a core the report leaves out and writes the cores

@@ -1,6 +1,6 @@
 # Distribution
 
-> Planned: [Publish Continual releases](../tickets/first-release/6-releases/story.md)
+> Planned: [Publish Continual releases](../tickets/first-release/7-releases/story.md)
 
 How Continual reaches the people and agents using it: a single executable, installed with
 cargo, built from source or downloaded, and the releases that repositories pin in their
@@ -35,16 +35,17 @@ cargo, built from source or downloaded, and the releases that repositories pin i
 - Merging the release pull request makes release-please tag `v<version>` and create the GitHub
   release. A release workflow, triggered by that release, builds the executables on each
   platform, attaches them with their checksums, and publishes the product crates to
-  crates.io in dependency order.
+  crates.io in dependency order: the library crates first, then the cores, the adapters and
+  `continual`.
 - release-please runs with a token of its own, a GitHub App's or a fine-grained personal
   access token kept as a repository secret, not the workflow's default token. GitHub starts no
   workflow on its own for an event the default token creates, so with it the release pull
   request's checks would not run by themselves and the release would start no build.
-- The product crates (the cores, the adapters and `continual`) share one version, set in
-  `[workspace.package]`, and are published together. Core and adapter crates are published
-  under `continual-` names, such as `continual-engine` and `continual-git`, while their
-  directories keep the short names ([Workspace](workspace.md#planned-crates)). `xtask` is
-  never published.
+- The product crates (the library crates, the cores, the adapters and `continual`) share one
+  version, set in `[workspace.package]`, and are published together. Library, core and
+  adapter crates are published under `continual-` names, such as `continual-vocabulary`,
+  `continual-engine` and `continual-git`, while their directories keep the short names
+  ([Workspace](workspace.md#planned-crates)). `xtask` is never published.
 - Pinning this repository to the new release is a separate pull request
   ([Checks: self-hosting](checks.md#self-hosting)).
 
@@ -54,6 +55,12 @@ cargo, built from source or downloaded, and the releases that repositories pin i
   platform, and the binary a version pins is exactly the code that runs. Rejected: plugins
   loaded at run time, which bring ABI concerns, a second distribution channel, and code a pin
   does not cover.
+- **Library crates are published like every product crate**, under the shared version and
+  first in the order. crates.io takes a crate only once its dependencies are there, and a
+  library crate's types are part of every core's public interface, so whoever uses one core
+  alone gets the library crate with it ([Workspace](workspace.md#library-crates)). Rejected:
+  keeping library crates off crates.io, which would keep every core off it with them and
+  break `cargo install continual`.
 - **Three ways to install.** `cargo install` suits Rust contributors, the prebuilt executable
   suits every other language and CI, and building from source suits contributors to
   Continual.

@@ -7,9 +7,10 @@ paths:
 
 The full rules are in `CONVENTIONS.md`; these are the ones that differ most from defaults.
 
-- A core depends on no other core and shares no crate with one. What it needs from another
-  core it asks through a driven port of its own, in its own types, which a bridge implements
-  (H1–H4).
+- A core depends on no other core, and cores share only library crates: data that several
+  cores mean the same way, never a rule, a port or an error of one core. What a core needs
+  from another core it asks through a driven port of its own, in its own types and library
+  types, which a bridge implements (H1–H4, H6).
 - Expected failures are `Result<T, E>` with an error enum per port or use case, implementing
   `Display` and `core::error::Error`, with every variant documented and listed under `# Errors`
   (E2). Bugs panic, documented under `# Panics` (E3). No sentinel values (E1).
