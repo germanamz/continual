@@ -30,8 +30,8 @@ fixes for PR comments.
 - `crates/cores/<name>/`: the cores. Every crate there is a core, with an allow-list of its
   own in `arch.toml`. `engine` and `registry` are the cores so far: domain types and port
   traits; no I/O. The planned cores go beside them (`docs/workspace.md`).
-- `crates/libraries/<name>/`: library crates, data that several cores mean the same way (none
-  yet; planned in `docs/workspace.md`).
+- `crates/libraries/<name>/`: library crates, data that several cores mean the same way.
+  `vocabulary` is the one so far.
 - `crates/continual/`: the CLI binary. `main.rs` is the composition root, `cli.rs` the driving
   adapter.
 - `crates/adapters/<name>/`: adapter crates, bridges among them (none yet).

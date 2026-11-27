@@ -30,9 +30,9 @@ This document describes how the checks work and why they are built this way.
   get explanatory text.
 - **No gate passes vacuously.** Each check has fixture tests that show it failing on a
   violation and passing on clean input. A check also fails when what it checks is missing: the
-  arch check when a configured crate is absent or when the cores directory, or the libraries
-  directory once `arch.toml` names one, holds no crate, the coverage check when the report
-  has no data for the workspace or for one of its cores.
+  arch check when a configured crate is absent or when the cores directory or the libraries
+  directory holds no crate, the coverage check when the report has no data for the workspace
+  or for one of its cores.
 - **One implementation per check.** Claude Code hooks, lefthook and GitHub Actions all call
   the same `cargo xtask` commands. Each check is a pure function over source text or data.
   Launching external tools is thin glue in `xtask/src/runner.rs`, the only code excluded from
@@ -122,9 +122,9 @@ what keeps the role from becoming a way round the boundaries between cores.
 - **`arch`** reads a `[libraries]` table from `arch.toml`, shaped like `[cores]`: the
   directory that holds the library crates, `crates/libraries`, and under
   `[libraries.allowed-dependencies]` an allow-list of external crates for each of them, keyed
-  by its package name. The table is absent while the workspace has no library crate, and
-  without it no crate is a library crate: one under `crates/libraries` has no role, which is
-  a finding. Once the table is there, every crate under its directory is a library crate. A
+  by its package name. A workspace with no library crate has no such table, and without it
+  no crate is a library crate: one under `crates/libraries` has no role, which is a finding.
+  With the table, every crate under its directory is a library crate. A
   directory that holds no crate is a finding, and so are a library crate without a list, a
   list that names no library crate and a list entry without a reason. A library crate
   depends on no workspace crate, another library crate included, and only on the external
@@ -151,10 +151,11 @@ what keeps the role from becoming a way round the boundaries between cores.
   core's, and takes the library crates from `arch.toml` and `cargo metadata` as it takes the
   cores.
 
-Each library crate carries a `clippy.toml` like a core's, held by review as a core's is. No
-tool sees whether a change to a library crate is backwards compatible, or whether what it adds
-belongs to one core alone. The guard puts every such change before a contributor, who judges
-both (H6, H8).
+Each library crate carries a `clippy.toml` like a core's, held by review as a core's is. It
+disallows what a core's does, and its reasons offer no port, as the source scan's finding
+offers none. No tool sees whether a change to a library crate is backwards compatible, or
+whether what it adds belongs to one core alone. The guard puts every such change before a
+contributor, who judges both (H6, H8).
 
 ### Tests
 

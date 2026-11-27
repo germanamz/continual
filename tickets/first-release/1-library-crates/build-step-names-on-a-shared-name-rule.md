@@ -33,6 +33,10 @@ decision "One name rule, and a type for each kind of name" in
 - A configuration problem for an invalid step name still names the step and the rule it
   breaks.
 - `Name` joins the domain glossary in `CONVENTIONS.md` (a guarded change).
+- The engine re-exports `Location` and `Located<T>` from its `workspace` module, so each has
+  two paths. Whether it re-exports `Name`'s error as well is open in
+  [Workspace: open questions](../../../docs/workspace.md#open-questions). Settle it with the
+  contributor before the error gets a second path.
 
 ## Behaviours to test
 

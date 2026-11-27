@@ -22,10 +22,10 @@ a log of what a session did.
 - An agent filled in some parts of the design from a short answer, and the contributor has
   not confirmed them one by one: one future for each entry, asynchronous ports down to those
   that read the repository, the `Timer` port, how batches run, the composition root handing
-  the approval label to the gate, the name of the first library crate
-  (`continual-vocabulary`), the `interfaces = false` key of the architecture check, and what
-  counts as a backwards compatible change to a library crate (H8). A task that finds one of
-  them wrong stops and reports it, and need not take it for the contributor's own choice.
+  the approval label to the gate, the `interfaces = false` key of the architecture check,
+  and what counts as a backwards compatible change to a library crate (H8). A task that
+  finds one of them wrong stops and reports it, and need not take it for the contributor's
+  own choice.
 
 ## Tickets and Tusk
 

@@ -31,6 +31,10 @@ or value at its line.
   the first to read the key, and the engine's `StepInput` has no place for it yet.
 - `jobs` reaches the engine as the signed number the file holds, and the engine rejects one
   below 1. The adapter passes a negative `jobs` on and does not judge it.
+- `Location` and `Located<T>` are `continual-vocabulary`'s, and the engine re-exports them.
+  This adapter is the first crate outside the engine to build one, and which of the two
+  paths it names them by is open in
+  [Workspace: open questions](../../../docs/workspace.md#open-questions).
 
 ## Behaviours to test
 

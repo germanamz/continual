@@ -1,0 +1,12 @@
+[package]
+name = "continual-vocabulary"
+description = "Continual's vocabulary: the data its cores mean the same way, with no I/O."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[lints]
+workspace = true

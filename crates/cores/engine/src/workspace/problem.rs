@@ -2,7 +2,8 @@
 
 use core::fmt;
 
-use super::input::Location;
+use continual_vocabulary::Location;
+
 use super::step_name::StepNameError;
 
 /// One thing wrong with a configuration, at the place the configuration input gave
@@ -19,8 +20,8 @@ pub struct Problem {
 
 impl fmt::Display for Problem {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let Location { file, line } = &self.location;
-        write!(formatter, "{file}:{line}: {}", self.kind)
+        let Self { location, kind } = self;
+        write!(formatter, "{location}: {kind}")
     }
 }
 

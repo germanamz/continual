@@ -32,7 +32,7 @@ anyone who cannot open the doc.
 | Driving port | What the outside asks a core to do. A concrete core type or function that driving adapters call directly. |
 | Adapter | A crate under `crates/adapters/`, or the CLI module, that translates between a port and one technology, or between a port and another core. |
 | Bridge | An adapter that joins two cores: it implements a driven port of one by calling the driving port of the other, and translates between their types (H2, H3). |
-| Library crate | A crate under `crates/libraries/` that holds data several cores mean the same way: plain records, and value objects with the invariants of their own value. It is neither a port nor an adapter: to a crate that uses it, it is a dependency (H6 to H8). None exists yet; the first is planned in [Workspace](docs/workspace.md#library-crates). |
+| Library crate | A crate under `crates/libraries/` that holds data several cores mean the same way: plain records, and value objects with the invariants of their own value. It is neither a port nor an adapter: to a crate that uses it, it is a dependency (H6 to H8). There is one so far, `crates/libraries/vocabulary` ([Workspace](docs/workspace.md#library-crates)). |
 | Composition root | A binary's `main.rs` (`continual`): the only code that builds adapters and hands them to the cores. |
 | Actor | Anything outside a core: a person, an agent, the file system, git, an external tool, a test, another core. |
 | Fake | A working, simplified implementation of a driven port, such as an in-memory source tree. |
@@ -123,8 +123,8 @@ Crates by role:
 - `crates/cores/<name>`: the cores. Every crate there is a core, with an allow-list of its
   own in `arch.toml`. `crates/cores/engine` and `crates/cores/registry` are the cores so far,
   and the others are planned. Modules are organised by feature inside a core.
-- `crates/libraries/<name>`: the library crates (none yet), each with an allow-list of its own
-  in `arch.toml`.
+- `crates/libraries/<name>`: the library crates, each with an allow-list of its own in
+  `arch.toml`. `crates/libraries/vocabulary` is the one so far.
 - `crates/continual`: the composition root, one per deployable.
 - `crates/adapters/<name>`: adapters, bridges among them (none yet).
 - `xtask`: repository tooling. Product crates never depend on it.

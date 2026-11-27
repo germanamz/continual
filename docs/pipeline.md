@@ -445,13 +445,13 @@ cores ([Workspace](workspace.md#planned-crates)), in feature modules:
 
   A `Workspace` is built from configuration input: plain records that hold each item as
   written, with its location, a file and a line. A location and a located value mean the
-  same in every core, so those two records move to the library crate as well. The steps
-  arrive by name, so no name can be given twice, a tool step's `run` as a program and its
-  arguments, and a check step's entries in list order, where a step that lists none has no
-  `checks`. Building reports every problem at once instead of stopping at the first (E9):
-  `jobs` and the configuration's `timeout` first, then the steps in the order of their
-  names. Each problem holds what is wrong and the location of the item that is wrong, and
-  prints as `continual.toml:31: message`.
+  same in every core, so those two records, `Location` and `Located<T>`, are the library
+  crate's and not the engine's own. The steps arrive by name, so no name can be given
+  twice, a tool step's `run` as a program and its arguments, and a check step's entries in
+  list order, where a step that lists none has no `checks`. Building reports every problem
+  at once instead of stopping at the first (E9): `jobs` and the configuration's `timeout`
+  first, then the steps in the order of their names. Each problem holds what is wrong and
+  the location of the item that is wrong, and prints as `continual.toml:31: message`.
 - **`pipeline`**: a `Run` plans the pipelines asked for and the pipelines they depend on, then
   works as a state machine: it says which entries are ready, in the fixed order the
   [pipelines](#pipelines) section gives, records each outcome, skips the

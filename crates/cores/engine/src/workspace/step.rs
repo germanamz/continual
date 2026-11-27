@@ -2,7 +2,9 @@
 
 use core::time::Duration;
 
-use super::input::{Located, StepInput};
+use continual_vocabulary::Located;
+
+use super::input::StepInput;
 use super::problem::{Problem, ProblemKind};
 use super::step_name::StepName;
 

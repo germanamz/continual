@@ -4,25 +4,9 @@
 use core::time::Duration;
 use std::collections::BTreeMap;
 
+use continual_vocabulary::{Located, Location};
+
 use super::step::{CheckEntry, Command};
-
-/// Where an item of a configuration is written.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Location {
-    /// The configuration file, as its source names it, such as `continual.toml`.
-    pub file: String,
-    /// The line of the item in that file, counting from 1.
-    pub line: usize,
-}
-
-/// A value of a configuration with the place it is written.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Located<T> {
-    /// The value as the configuration gives it.
-    pub value: T,
-    /// Where the configuration holds it.
-    pub location: Location,
-}
 
 /// One configuration as written, unchecked. [`Workspace::build`](super::Workspace::build)
 /// turns it into a workspace or says what is wrong with it.

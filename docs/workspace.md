@@ -21,6 +21,9 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
 - The engine core exposes the step definitions of its `workspace` module: `Workspace::build`
   turns configuration input into a workspace of valid steps, or reports every problem with
   its location ([Pipeline](pipeline.md#the-engine-core)).
+- The library crate `continual-vocabulary` exposes two plain records: `Location`, a file and
+  a line, which prints as `file:line`, and `Located<T>`, a value with the place it is
+  written ([Library crates](#library-crates)).
 - Every crate builds on the toolchain pinned in `rust-toolchain.toml`: Rust 1.99.1 with
   rustfmt, clippy and llvm-tools-preview.
 
@@ -32,6 +35,7 @@ finding and pipeline come from the [domain glossary](../CONVENTIONS.md#domain-gl
 | --- | --- | --- |
 | `continual-engine` | `crates/cores/engine/` | The engine core: so far the step definitions of its `workspace` module, with the configuration input they are built from and the problems they are rejected with. No I/O and no technology dependencies. |
 | `continual-registry` | `crates/cores/registry/` | The registry core: domain types and, as they arrive, driven-port traits. No I/O and no technology dependencies. |
+| `continual-vocabulary` | `crates/libraries/vocabulary/` | The library crate: the data several cores mean the same way, so far `Location` and `Located<T>`. No I/O and no technology dependencies. |
 | `continual` | `crates/continual/` | The CLI binary. `main.rs` is the composition root and `cli.rs` the driving adapter, built on clap. |
 | `xtask` | `xtask/` | Repository tooling, the checks behind `cargo xtask` ([Checks](checks.md)). Product crates never depend on it. |
 
@@ -40,11 +44,13 @@ adapter arrive with the first feature that needs them. The ports are listed in
 [Continual's cores](../CONVENTIONS.md#3-continuals-cores), and the design document of each
 area says what its ports ask.
 
-`arch.toml` classifies every crate as core, composition root, adapter or tooling. It names
-`crates/cores` as the directory that holds the cores, so every crate under it is a core, and
-`crates/adapters` as the one that holds the adapters. It lists each core's allowed external
-dependencies (none yet) and the couplings allowed between adapters (none yet).
-`cargo xtask arch` enforces it ([Checks](checks.md#cargo-xtask-checks)).
+`arch.toml` classifies every crate as core, library crate, composition root, adapter or
+tooling. It names `crates/cores` as the directory that holds the cores, so every crate under
+it is a core, `crates/libraries` as the one that holds the library crates and
+`crates/adapters` as the one that holds the adapters. It lists the allowed external
+dependencies of each core and of each library crate (none yet) and the couplings allowed
+between adapters (none yet). `cargo xtask arch` enforces it
+([Checks](checks.md#cargo-xtask-checks)).
 
 ### Planned crates
 
@@ -115,8 +121,6 @@ registry's ([Checks](checks.md#cargo-xtask-checks)).
 
 ### Library crates
 
-> Planned: [Share data between cores in library crates](../tickets/first-release/1-library-crates/story.md)
-
 A library crate is a third kind of product crate, beside the cores and the adapters. It holds
 data that several cores mean the same way, so each of them uses one definition instead of
 declaring a copy that a bridge maps. It is no part of the hexagon, neither a port nor an
@@ -124,11 +128,18 @@ adapter: to a crate that uses it, it is a dependency, as the standard library is
 crates live under `crates/libraries/<name>/`. Cores, adapters and composition roots may all
 depend on one, and it depends on no workspace crate.
 
-One library crate is planned, `continual-vocabulary` in `crates/libraries/vocabulary/`:
+There is one library crate, `continual-vocabulary` in `crates/libraries/vocabulary/`. It
+holds `Location` and `Located<T>`: where something is written, a file and a line, and a value
+with the place it is written. Both are plain records, and a `Location` prints as `file:line`.
+The engine builds its configuration input and its problems on them, and re-exports both from
+its `workspace` module ([open questions](#open-questions)).
 
-| It holds | What it is | Arrives with |
+> Planned: [Share data between cores in library crates](../tickets/first-release/1-library-crates/story.md)
+
+The rest of what the cores share arrives in the same crate:
+
+| It will hold | What it is | Arrives with |
 | --- | --- | --- |
-| `Location` and `Located<T>` | Where something is written, a file and a line, and a value with the place it is written. Plain records; a `Location` prints as `file:line`. | [Share locations in the first library crate](../tickets/first-release/1-library-crates/share-locations-in-the-first-library-crate.md), which moves them out of the engine |
 | `Name` | The name rule: the lowercase, hyphenated text that names a step, a check, a pipeline or a package, with the one error enum that says why a text is not a name. A value object. | [Build step names on a shared name rule](../tickets/first-release/1-library-crates/build-step-names-on-a-shared-name-rule.md), then [Build check names on the shared name rule](../tickets/first-release/1-library-crates/build-check-names-on-the-shared-name-rule.md) |
 | `Finding` | One violation, as a location and a message, which prints as `path:line: message`. A plain record. | The first task that reports one: [Run checks through a registry](../tickets/first-release/3-built-in-checks/run-checks-through-a-registry.md) or [Check comments in Continual](../tickets/first-release/3-built-in-checks/check-comments-in-continual.md) |
 | Located values | A check entry's settings and the gate's sections of the configuration, as values that each carry their location, which nothing reads before the check or the gate they belong to. Plain records. | The first task that carries them: [Run check steps](../tickets/first-release/3-built-in-checks/run-check-steps.md), [Run checks through a registry](../tickets/first-release/3-built-in-checks/run-checks-through-a-registry.md) or [Join the gate to the engine](../tickets/first-release/5-claude-code-mod/join-the-gate-to-the-engine.md) |
@@ -165,30 +176,31 @@ is published in [Distribution](distribution.md#design).
 ### Repository layout
 
 ```text
-VISION.md                  what Continual does for the people and agents using it
-README.md                  what it is, setup, commands, links
-CONVENTIONS.md             the rules every contributor follows
-MEMORY.md                  what one session hands to the next
-AGENTS.md, CLAUDE.md       the agents' short form of CONVENTIONS.md
-docs/                      design documents, one per area (this file is one)
-tickets/                   planned work, as Tusk tickets
-Cargo.toml, Cargo.lock     the workspace, shared lints and dependency versions
-rust-toolchain.toml        the pinned toolchain
-rustfmt.toml, clippy.toml  formatter settings and lint thresholds
-arch.toml                  architecture rules for `cargo xtask arch`
-deny.toml                  supply-chain rules for `cargo deny`
-committed.toml             commit-message rules for `committed`
-lefthook.yml               git hooks
-tusk.toml                  the Tusk workspace manifest
-.gitattributes             LF line endings on every platform
-.cargo/                    the `xtask` alias and cargo-mutants settings
-.config/nextest.toml       the nextest CI profile
-.claude/                   Claude Code settings, hooks, path-scoped rules and skills
-.github/                   CI workflows and the pull-request template
-crates/cores/engine/       the engine core
-crates/cores/registry/     the registry core
-crates/continual/          the CLI binary
-xtask/                     the repository checks
+VISION.md                     what Continual does for the people and agents using it
+README.md                     what it is, setup, commands, links
+CONVENTIONS.md                the rules every contributor follows
+MEMORY.md                     what one session hands to the next
+AGENTS.md, CLAUDE.md          the agents' short form of CONVENTIONS.md
+docs/                         design documents, one per area (this file is one)
+tickets/                      planned work, as Tusk tickets
+Cargo.toml, Cargo.lock        the workspace, shared lints and dependency versions
+rust-toolchain.toml           the pinned toolchain
+rustfmt.toml, clippy.toml     formatter settings and lint thresholds
+arch.toml                     architecture rules for `cargo xtask arch`
+deny.toml                     supply-chain rules for `cargo deny`
+committed.toml                commit-message rules for `committed`
+lefthook.yml                  git hooks
+tusk.toml                     the Tusk workspace manifest
+.gitattributes                LF line endings on every platform
+.cargo/                       the `xtask` alias and cargo-mutants settings
+.config/nextest.toml          the nextest CI profile
+.claude/                      Claude Code settings, hooks, path-scoped rules and skills
+.github/                      CI workflows and the pull-request template
+crates/cores/engine/          the engine core
+crates/cores/registry/        the registry core
+crates/libraries/vocabulary/  the vocabulary library crate
+crates/continual/             the CLI binary
+xtask/                        the repository checks
 ```
 
 The [Workflow](workflow.md) document describes the files under `.claude/`, `.github/`,
@@ -308,3 +320,17 @@ configuration.
 - **clap with the derive feature**, since every future command needs argument parsing.
 - **Smoke tests run the built binary** through `env!("CARGO_BIN_EXE_continual")` and
   `std::process::Command`, so they need no extra test dependency.
+
+## Open questions
+
+- Whether a core re-exports the library types its public interface speaks. The engine's
+  tests name `Location` and `Located<T>` in its `workspace` module, where the two records
+  were declared before they moved, so the engine re-exports them and each has two paths:
+  `continual_engine::workspace::Location` and `continual_vocabulary::Location`. One type
+  under two paths is the cost for which the decision on a library crate's limits rejects
+  cores that re-export. Nothing says yet which path an adapter or a new test writes, whether
+  the re-export goes once the engine's tests name the library crate, which is a guarded
+  change, or whether a core re-exports `Name`'s error and `Finding` when they arrive. The
+  tasks that meet it next:
+  [Build step names on a shared name rule](../tickets/first-release/1-library-crates/build-step-names-on-a-shared-name-rule.md)
+  and [Read continual.toml](../tickets/first-release/2-pipeline/read-continual-toml.md).

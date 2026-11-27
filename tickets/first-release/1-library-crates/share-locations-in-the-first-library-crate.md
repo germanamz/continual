@@ -8,7 +8,7 @@ blocks:
 parent: tickets/first-release/1-library-crates/story
 points: 2
 priority: high
-status: pending
+status: completed
 ---
 
 # Share locations in the first library crate

@@ -11,6 +11,16 @@ directory = "crates/cores"
 continual-engine = []
 continual-registry = []
 
+# Every crate under this directory is a library crate: it holds data that several cores
+# mean the same way, declares no port and depends on no workspace crate.
+[libraries]
+directory = "crates/libraries"
+
+# Each library crate may depend only on the external crates on its own list, each with a
+# reason, as a core may. Every library crate has a list, even an empty one.
+[libraries.allowed-dependencies]
+continual-vocabulary = []
+
 # One composition root per deployable: the only crates that wire adapters.
 [composition-roots]
 crates = ["continual"]

@@ -24,9 +24,8 @@ each core and adapter under its `continual-` name, checked on every pull request
 ## Carried over
 
 - Library crates are product crates and go first in the dependency order.
-  `continual-vocabulary` is among them once
-  [Share locations in the first library crate](../1-library-crates/share-locations-in-the-first-library-crate.md)
-  is merged.
+  `continual-vocabulary` is among them. It sets `publish = false`, as the cores do, and the
+  engine depends on it by path alone, where crates.io asks for a version beside the path.
 
 ## Behaviours to test
 
