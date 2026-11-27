@@ -475,3 +475,12 @@ built-in checks.
   contributor before it does:
   [Run checks through a registry](../tickets/first-release/3-built-in-checks/run-checks-through-a-registry.md)
   or [Check comments in Continual](../tickets/first-release/3-built-in-checks/check-comments-in-continual.md).
+- What this repository's `tooling` and `composition-roots` layers say. `cargo xtask arch`
+  reports a tooling crate only for depending on an adapter, so `xtask` may depend on a
+  library crate, a core or a composition root, and it reports a composition root that
+  depends on another. The [architecture settings](#architecture) above give `tooling` no
+  `may_depend_on`, which forbids all three, and leave `composition-roots` without
+  `independent`, which allows the last. `xtask` depends on no workspace crate and there is
+  one composition root, so both checks pass on this repository today.
+  [Read Rust crates and their dependencies](../tickets/first-release/3-built-in-checks/read-rust-crates-and-their-dependencies.md)
+  meets it, since it holds the settings to the fixtures of `cargo xtask arch`.

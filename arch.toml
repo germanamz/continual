@@ -1,7 +1,7 @@
-# Architecture rules checked by `cargo xtask arch`. See CONVENTIONS.md (B1–B5, B9, H1, H4).
+# Architecture rules checked by `cargo xtask arch`. See CONVENTIONS.md (B1–B5, B9, H1, H4, H7).
 
 # Every crate under this directory is a core: it holds one unit of the domain and its
-# ports, and depends on no other workspace crate, another core included.
+# ports, and depends on no workspace crate but library crates, so on no other core.
 [cores]
 directory = "crates/cores"
 
@@ -15,8 +15,8 @@ continual-registry = []
 [composition-roots]
 crates = ["continual"]
 
-# Every crate under this directory is an adapter. Adapters depend on cores only,
-# except for declared couplings: { from = "…", to = "…", reason = "…" }.
+# Every crate under this directory is an adapter. Adapters depend only on cores and
+# library crates, except for declared couplings: { from = "…", to = "…", reason = "…" }.
 [adapters]
 directory = "crates/adapters"
 couplings = []

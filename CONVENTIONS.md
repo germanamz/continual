@@ -143,20 +143,20 @@ Crates by role:
 | B6 | Everything between a core and the outside passes through a port: files, environment, network, processes, threads, clock, randomness and other cores. | A | core `clippy.toml` disallowed lists; `cargo xtask arch` source scan |
 | B7 | Port signatures use only the declaring core's types and the types of library crates (H6). No process, git-library, parser or framework types, and no other core's types. | A | follows from B1 |
 | B8 | A core does not reach through a port's return value into technology objects. | A | follows from B7; review |
-| B9 | Every new boundary gets an `arch.toml` entry; a new core's is its allow-list, and so is a new library crate's. The arch check fails when a configured crate is missing, when a core has no allow-list or when the cores directory holds no crate, so it cannot pass vacuously. | A | `cargo xtask arch` |
+| B9 | Every new boundary gets an `arch.toml` entry; a new core's is its allow-list, and so is a new library crate's. The arch check fails when a configured crate is missing, when a core or a library crate has no allow-list, or when the cores directory or the libraries directory holds no crate, so it cannot pass vacuously. | A | `cargo xtask arch` |
 | B10 | Existing violations, if there ever are any, are frozen in `arch.toml` with a reason, never hidden by disabling a rule. No new ones. | A | review; `cargo xtask guard` |
 
 ### Cores (H)
 
 | ID | Rule | Type | Check |
 | --- | --- | --- | --- |
-| H1 | Continual's rules are split into cores, each one unit of logic with rules of its own that can be read and tested whole. No core depends on another core. | A | `cargo xtask arch` (a core depends on no workspace crate) |
+| H1 | Continual's rules are split into cores, each one unit of logic with rules of its own that can be read and tested whole. No core depends on another core. | A | `cargo xtask arch` (a core depends on no workspace crate but library crates) |
 | H2 | A core that needs another core states the need as a driven port in its own domain language (P1, P4). A bridge implements the port by calling the other core's driving port. | A | `cargo xtask arch`; review |
 | H3 | A bridge joins two cores and only translates between their types and errors (A1). A library crate's type crosses it unchanged, as a `String` does. It is named for the two cores, the one that asks first: `engine-registry`. | A | review |
-| H4 | Cores share only library crates (H6). Each core declares every other type its ports speak, and a bridge maps one core's types to the other's. A rule stays in the core that owns it (Q16): another core asks for its result through a port and never copies it. | A | `cargo xtask arch`; review |
+| H4 | Cores share only library crates (H6). Each core declares every other type its ports speak, and a bridge maps one core's types to the other's. A rule stays in the core that owns it (Q16): another core asks for its result through a port and never copies it. | A | `cargo xtask arch` (a core depends on no workspace crate but library crates); review |
 | H5 | A unit becomes a core of its own when it has rules of its own and a narrow conversation with the rest. Parts that share one model stay in one core as feature modules (W8), as the engine's workspace, pipeline and events do. Say which in the PR. | J | review |
-| H6 | A library crate holds data that two or more cores mean the same way, in the code or in the design documents: plain data records, and value objects whose invariant is about the value alone (Q13). It holds nothing that only one core owns, whether a rule, an error or a concept, and it declares no trait and holds no use case, so ports stay in the cores (P7). It is neither a port nor an adapter: to a crate that uses it, it is a dependency, as the standard library is. | A | review; `cargo xtask arch` once it knows library crates ([Checks](docs/checks.md#library-crates)) |
-| H7 | A library crate keeps a core's limits: no technology dependency and no I/O, clock, environment, process or randomness (B1, B6, X1), no `serde` (M4), an allow-list of its own in `arch.toml`, a `clippy.toml` of its own and a core's coverage minimum. It depends on no workspace crate, another library crate included. Cores, adapters and composition roots may depend on it. | A | review; `cargo xtask arch` and `cargo xtask coverage` once they know library crates ([Checks](docs/checks.md#library-crates)) |
+| H6 | A library crate holds data that two or more cores mean the same way, in the code or in the design documents: plain data records, and value objects whose invariant is about the value alone (Q13). It holds nothing that only one core owns, whether a rule, an error or a concept, and it declares no trait and holds no use case, so ports stay in the cores (P7). It is neither a port nor an adapter: to a crate that uses it, it is a dependency, as the standard library is. | A | review; `cargo xtask arch` once its source scan reports traits ([Checks](docs/checks.md#library-crates)) |
+| H7 | A library crate keeps a core's limits: no technology dependency and no I/O, clock, environment, process or randomness (B1, B6, X1), no `serde` (M4), an allow-list of its own in `arch.toml`, a `clippy.toml` of its own and a core's coverage minimum. It depends on no workspace crate, another library crate included. Cores, adapters and composition roots may depend on it. | A | `cargo xtask arch` (a library crate's allow-list, its dependencies and the source scan); review; `cargo xtask coverage` once it knows library crates ([Checks](docs/checks.md#library-crates)) |
 | H8 | Every change to a library crate is a guarded change (R2), and it is backwards compatible: it adds, and never removes, renames or alters what a crate already uses. A change that cannot be, such as a new field on a record, a new variant of an enum or a tighter invariant, arrives as a new item beside the old one. The old one goes in a planned cleanup, a ticket of its own (K7), once nothing uses it. | A | review; `cargo xtask guard` once it knows library crates ([Checks](docs/checks.md#library-crates)) |
 
 ### Ports (P)
@@ -407,7 +407,7 @@ boundary.
 | Core restrictions | each core's `clippy.toml`, such as `crates/cores/registry/clippy.toml` (same clippy run) | B6, X1, X4, Q8 |
 | Docs | `cargo doc --workspace --no-deps` with `RUSTDOCFLAGS="-D warnings"` | C4 |
 | Comments | `cargo xtask comments` | C1–C3, Q20 |
-| Architecture | `cargo xtask arch` (also: every crate sets `[lints] workspace = true`) | B1–B7, B9, H1, H4, P7, X3, M4, Q21 |
+| Architecture | `cargo xtask arch` (also: every crate sets `[lints] workspace = true`) | B1–B7, B9, H1, H4, H7, P7, X3, M4, Q21 |
 | Guard | `cargo xtask guard` (CI: the PR checks workflow, `--ci --labels …`) | G5, G9, B10, R2 |
 | Tests | `cargo nextest run --workspace`, `cargo test --workspace --doc` | T rules |
 | Coverage | `cargo xtask coverage` | section 4, Tests |
