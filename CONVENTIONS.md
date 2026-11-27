@@ -9,7 +9,7 @@ The research behind these rules (the audit of the hexagonal pattern, the reasons
 sources for each rule, and the evidence on rule-file size) is the clean-hexagon doc,
 "Clean ports and adapters agent rules":
 <https://claude.ai/artifact/Ks8VYF57ui3Buoy9nvaMof>. Rule IDs here match that doc. Rules with
-IDs the doc does not have (C, K, R) are specific to Continual. This file stands on its own for
+IDs the doc does not have (C, H, K, R) are specific to Continual. This file stands on its own for
 anyone who cannot open the doc.
 
 ## 1. How to read this
@@ -26,18 +26,23 @@ anyone who cannot open the doc.
 
 | Term | Meaning in Continual |
 | --- | --- |
-| Core | `crates/continual-core`: every business rule and no technology. No I/O, clock, environment or randomness. |
-| Port | A conversation between the core and one external actor, named for its purpose in domain language. |
-| Driven port | What the core needs from outside, such as running a tool or reading the repository's files. A trait declared in the core and implemented by an adapter. |
-| Driving port | What the outside asks the core to do. A concrete core type or function that driving adapters call directly. |
-| Adapter | A crate under `crates/adapters/`, or the CLI module, that translates between a port and one technology. |
-| Composition root | A binary's `main.rs` (`continual`): the only code that builds adapters and hands them to the core. |
-| Actor | Anything outside the core: a person, an agent, the file system, git, an external tool, a test. |
+| Core | A crate that holds one unit of Continual's rules and no technology: no I/O, clock, environment or randomness. No core depends on another (H1). Today there is one, `crates/continual-core`; the planned cores are in section 3. |
+| Port | A conversation between a core and one actor outside it, named for its purpose in that core's domain language. |
+| Driven port | What a core needs from outside, such as running a tool, reading the repository's files or asking another core. A trait declared in the core that needs it and implemented by an adapter. |
+| Driving port | What the outside asks a core to do. A concrete core type or function that driving adapters call directly. |
+| Adapter | A crate under `crates/adapters/`, or the CLI module, that translates between a port and one technology, or between a port and another core. |
+| Bridge | An adapter that joins two cores: it implements a driven port of one by calling the driving port of the other, and translates between their types (H2, H3). |
+| Composition root | A binary's `main.rs` (`continual`): the only code that builds adapters and hands them to the cores. |
+| Actor | Anything outside a core: a person, an agent, the file system, git, an external tool, a test, another core. |
 | Fake | A working, simplified implementation of a driven port, such as an in-memory source tree. |
 | Contract suite | One generic test suite for a driven port, run against the fake and every real adapter. |
 | Interactor | Not used here; the word means different things in Cockburn's and Martin's writing. |
 | Design document | A living document in `docs/` that describes one area of Continual as a whole, built and planned (K1). |
 | Ticket | One unit of planned work: a Tusk `ticket` node in `tickets/` (K5). |
+| Points | A ticket's relative effort on the Fibonacci scale: 1, 2, 3, 5, 8, 13 or 21 (K9). |
+| Task | A ticket of 1, 2 or 3 points: one pull request, workable on its own (K9). |
+| Story | Work of 5 points or more, as a parent ticket split into tasks (K9). |
+| Epic | A parent ticket whose children are stories: one milestone (K9). |
 
 ### Domain glossary
 
@@ -46,39 +51,74 @@ One term per concept (Q1). Reuse these words in code, tests and docs.
 | Term | Meaning |
 | --- | --- |
 | Rule | A convention contributors follow, with an ID such as B1 or T6. A check enforces one or more rules. |
-| Check | One step that inspects a repository and either passes or reports findings. Named by a check name (`CheckName`). |
-| Check name | The lowercase, hyphenated name a contributor types to run one check, such as `comments` (`CheckName`). |
+| Check | One of Continual's own inspections, such as `comments`, which a step runs and which either passes or reports findings. Named by a check name (`CheckName`). |
+| Check name | The lowercase, hyphenated name of a check, such as `comments` (`CheckName`). |
 | Finding | One violation a check reports, located as `path:line: message`. |
-| Pipeline | The ordered checks that run together, stopping at the first failure of a check configured to stop it, the same way locally and in CI. |
-| Tool | An existing program a check runs, such as a formatter, linter, test runner or coverage tool. Continual runs tools; it never reimplements them. |
-| Gate | A check that blocks a change until it passes, or until a contributor approves it. |
+| Step | A named definition in `continual.toml` of what to run: a tool, or checks to run in order. A step never says what it depends on. |
+| Required entry | A step as one pipeline lists it, whose failure skips everything downstream of it in that pipeline. A pipeline's entries are required unless it says otherwise, so one step can be required in one pipeline and not in another. |
+| Pipeline | A named, ordered list in `continual.toml` of the steps to run, starting at its first, each later step waiting for steps above it; run the same way locally and in CI. A pipeline can depend on other pipelines. |
+| Event | A moment, such as a commit or the end of an agent's turn, that runs the pipelines a repository maps to it. |
+| Package | A directory with its own `continual.toml`, extending the root one, in a repository that has several. |
+| Tool | An existing program a step runs, such as a formatter, linter, test runner or coverage tool. Continual runs tools and passes their output through; it never reimplements them. |
+| Gate | A step or check that blocks a change until it passes, or until a contributor approves it. |
 | Guarded change | A change to existing tests or gate files, which needs a contributor's approval. |
 | Language | A programming language a repository is written in. Each one is supported through an adapter. |
 
-## 3. Continual's hexagon
+## 3. Continual's cores
 
 Continual's domain is the enforcement of rules: what a check decides, how findings are
-reported, the order a pipeline runs in and when a gate blocks. Whether two `//` lines form a
-comment block, whether a dependency crosses a boundary, whether a test was weakened and
-whether coverage meets its minimum are core decisions, written as plain Rust types in
-`continual-core`. What stays outside is the machinery: launching tools, reading files, asking
-git and parsing each language's source.
+reported, the order a pipeline's steps run in, which steps a failure skips, and when a gate
+blocks. Whether two `//` lines form a comment block, whether a dependency crosses a boundary,
+whether a test was weakened and whether a command bypasses the checks are core decisions,
+written as plain Rust types in a core. What stays outside is the machinery: launching tools,
+reading files and configuration, asking git and parsing each language's source.
 
-| Concern | Lives in | Port (when it arrives) |
-| --- | --- | --- |
-| Running an external tool and collecting its result | driven adapter that launches processes | core trait, e.g. `ToolRunner` |
-| Reading the repository's files and configuration | driven adapter | core trait, e.g. `SourceTree` |
-| Comparing the working tree with a base revision | driven adapter wrapping git | core trait, e.g. `ChangeHistory` |
-| Reading a language's comments, imports and tests | driven adapter per language, Rust first | core trait, e.g. `LanguageSyntax` |
-| Clock, randomness, IDs, environment | driven adapter, or values passed in | `Clock` trait or plain arguments |
-| CLI | driving adapter in `crates/continual` | calls core types directly |
-| Agent-harness hooks | driving adapter (future) | calls core types directly |
+The rules are split into cores, each one unit of logic small enough to read and test whole
+(H1). No core depends on another. A core that needs another states the need as a driven port
+in its own words, and a bridge implements that port by calling the other core (H2 to H4).
+Today the one core is `crates/continual-core`. The cores below are planned, and
+[Workspace](docs/workspace.md#planned-crates) lists their crates.
+
+| Core | Holds |
+| --- | --- |
+| `engine` | The configuration as a workspace of steps, pipelines and packages; the order a run walks them in and what a failure skips; events, their files and placeholders. |
+| `registry` | The check registry: the built-in checks by name, the order a step's checks run in and the rules every check shares. It holds no check's own rule. |
+| `comments`, `architecture`, `guard`, `commit-messages`, `rust-workspace-lints` | One built-in check each: its settings and its rule. |
+| `gate` | The review gate and the blocked commands: which commands are gated actions or bypasses, and the gate decision. |
+
+| Concern | Lives in | Port (when it arrives) | Declared by |
+| --- | --- | --- | --- |
+| Reading `continual.toml` | driven adapter `toml-config` | `ConfigSource` | `engine` |
+| Running external tools and collecting their results | driven adapter `process` | `ToolRunner` | `engine` |
+| Showing a run's progress and the tools' output | driven adapter `terminal` | `Report` | `engine` |
+| Running a step's checks | bridge `engine-registry` | `CheckRunner` | `engine` |
+| Reading a check's entries at the base revision | bridge `engine-registry` | `BaseEntries` | `registry` |
+| Asking one built-in check | bridge `registry-<check>`, one for each check | `Check` | `registry` |
+| Reading the repository's files | driven adapter `git` | `SourceTree` | `registry`, `architecture` |
+| Comparing the working tree with a base revision | driven adapter `git` | `ChangeHistory` | `engine`, `guard`, `commit-messages` |
+| Reading a language's comments, imports, tests and manifests | driven adapter per language, Rust first | `LanguageSyntax` | `comments`, `architecture`, `guard`, `rust-workspace-lints` |
+| Waiting out a check step's time limit | driven adapter `context`, the execution context | `Timer` | `engine` |
+| Matching text against a repository's patterns | driven adapter `context`, the execution context | `Patterns` | `commit-messages` |
+| Reading the repository's gate rules | bridge `gate-engine` | `GateRules` | `gate` |
+| Clock, randomness, IDs, environment | values passed in by the composition root | plain arguments; a `Clock` trait only if a rule needs the time | |
+| CLI | driving adapter in `crates/continual` | calls core types directly | |
+| Agent-harness hooks | driving adapter in `crates/continual`, Claude Code first | calls core types directly | |
+
+A port that several cores declare, such as `SourceTree`, is a trait in each of them, holding
+only the operations that core asks. One adapter crate implements them all, since they talk to
+one actor.
+
+Each port's operations are described in the design document of its area:
+[Pipeline](docs/pipeline.md#ports-and-adapters),
+[Built-in checks](docs/built-in-checks.md#ports-and-adapters) and
+[Harness](docs/harness.md#design).
 
 Crates by role:
 
-- `crates/continual-core`: the core. Modules are organised by feature inside it.
+- `crates/cores/<name>`: the cores (planned). Until the first of them arrives,
+  `crates/continual-core` is the one core. Modules are organised by feature inside a core.
 - `crates/continual`: the composition root, one per deployable.
-- `crates/adapters/<name>`: adapters (none yet).
+- `crates/adapters/<name>`: adapters, bridges among them (none yet).
 - `xtask`: repository tooling. Product crates never depend on it.
 
 ## 4. Rules
@@ -87,28 +127,38 @@ Crates by role:
 
 | ID | Rule | Type | Check |
 | --- | --- | --- | --- |
-| B1 | The core does not depend on adapter crates, composition roots, or any process launcher, git library, language parser or lexer, file-system library, async runtime, framework or vendor SDK. | A | `cargo xtask arch` (empty allow-list) |
-| B2 | Driven ports are traits in the core, implemented by adapters. The core never names a concrete adapter type. | A | `cargo xtask arch` |
-| B3 | Driving adapters may call core types and functions directly. The core never depends on them. | A | `cargo xtask arch` |
+| B1 | A core does not depend on another core, on adapter crates, composition roots, or any process launcher, git library, language parser or lexer, file-system library, async runtime, framework or vendor SDK. | A | `cargo xtask arch` (empty allow-list) |
+| B2 | Driven ports are traits in the core that needs them, implemented by adapters. A core never names a concrete adapter type. | A | `cargo xtask arch` |
+| B3 | Driving adapters may call core types and functions directly. A core never depends on them. | A | `cargo xtask arch` |
 | B4 | Adapters do not depend on each other, except couplings declared in `arch.toml` with a reason. | A | `cargo xtask arch` |
-| B5 | Each deployable has one composition root, the only code that constructs driven adapters (tests excepted). It builds driven adapters, then the core, then driving adapters. | A | `cargo xtask arch` (only roots depend on adapters) |
-| B6 | Everything between the core and the outside passes through a port: files, environment, network, processes, threads, clock and randomness. | A | core `clippy.toml` disallowed lists; `cargo xtask arch` source scan |
-| B7 | Port signatures use core types only. No process, git-library, parser or framework types. | A | follows from B1 |
-| B8 | The core does not reach through a port's return value into technology objects. | A | follows from B7; review |
+| B5 | Each deployable has one composition root, the only code that constructs driven adapters (tests excepted). It builds each core after the driven adapters that core needs, a bridge after the core it calls, and the driving adapters last. | A | `cargo xtask arch` (only roots depend on adapters) |
+| B6 | Everything between a core and the outside passes through a port: files, environment, network, processes, threads, clock, randomness and other cores. | A | core `clippy.toml` disallowed lists; `cargo xtask arch` source scan |
+| B7 | Port signatures use the declaring core's types only. No process, git-library, parser or framework types, and no other core's types. | A | follows from B1 |
+| B8 | A core does not reach through a port's return value into technology objects. | A | follows from B7; review |
 | B9 | Every new boundary gets an `arch.toml` entry. The arch check fails when a configured crate is missing, so it cannot pass vacuously. | A | `cargo xtask arch` |
 | B10 | Existing violations, if there ever are any, are frozen in `arch.toml` with a reason, never hidden by disabling a rule. No new ones. | A | review; `cargo xtask guard` |
+
+### Cores (H)
+
+| ID | Rule | Type | Check |
+| --- | --- | --- | --- |
+| H1 | Continual's rules are split into cores, each one unit of logic with rules of its own that can be read and tested whole. No core depends on another core. | A | `cargo xtask arch` (a core depends on no workspace crate) |
+| H2 | A core that needs another core states the need as a driven port in its own domain language (P1, P4). A bridge implements the port by calling the other core's driving port. | A | `cargo xtask arch`; review |
+| H3 | A bridge joins two cores and only translates between their types and errors (A1). It is named for the two cores, the one that asks first: `engine-registry`. | A | review |
+| H4 | Cores share no crate. Each core declares the types its ports speak, and a bridge maps one core's types to the other's. A rule stays in the core that owns it (Q16): another core asks for its result through a port and never copies it. | A | `cargo xtask arch`; review |
+| H5 | A unit becomes a core of its own when it has rules of its own and a narrow conversation with the rest. Parts that share one model stay in one core as feature modules (W8), as the engine's workspace, pipeline and events do. Say which in the PR. | J | review |
 
 ### Ports (P)
 
 | ID | Rule | Type | Check |
 | --- | --- | --- | --- |
 | P1 | Port and operation names use domain language and never name a library: `ToolRunner::run`, not `ProcessCommandWrapper`. Check, finding, rule and gate words are domain language here; a library's name is not. A tool's name (`clippy`, `eslint`) is configuration data, never a port or type name. | A | review |
-| P2 | Design ports from the external actors: start with one port per actor and split only with a stated reason. A driven port maps to an external system, not to a domain noun. | J | review |
+| P2 | Design ports from the actors outside the core: start with one port per actor and split only with a stated reason. A driven port maps to an external system or another core, not to a domain noun. | J | review |
 | P3 | One port may hold several traits. Do not create a port per entity. | J | review |
-| P4 | A new driven port needs an external actor (I/O, time, randomness, a third party) or a second implementation that exists now; a test fake counts. | A | review |
+| P4 | A new driven port needs an actor outside the core (I/O, time, randomness, a third party, another core) or a second implementation that exists now; a test fake counts. | A | review |
 | P5 | Every port trait and method documents inputs and constraints, outputs, failures (`# Errors`), side effects and invariants, without restating the name. | A | `missing_docs`, `missing_errors_doc`; review |
 | P6 | Every port has a test actor: a fake for a driven port, a test driver for a driving port. | A | review; contract suite (T6) |
-| P7 | Ports live in `continual-core`. | A | `cargo xtask arch` |
+| P7 | Ports live in the cores, each in the core whose need it states. | A | `cargo xtask arch` |
 | P8 | Driving ports are concrete core types or functions, not single-implementation traits. | A | review |
 | P9 | A domain change may change ports; a technology change must not. If one seems to, stop and report (G7). | A | review |
 
@@ -122,7 +172,7 @@ Crates by role:
 | A4 | Vendor types and field names stay inside the adapter and never cross a port. | A | follows from B1, B7 |
 | A5 | When a foreign model already matches the core's language, keep the adapter thin. | J | review |
 | A6 | Long field-by-field mapping functions may exceed the length limit under `#[expect(clippy::too_many_lines, reason = "field-by-field mapping")]`. | J | clippy |
-| A7 | Similar code in two adapters, or in an adapter and a fake, is not deduplicated through the core. | A | review |
+| A7 | Similar code in two adapters, or in an adapter and a fake, is not deduplicated through a core. | A | review |
 
 ### Core code quality (Q)
 
@@ -143,7 +193,7 @@ Crates by role:
 | Q13 | A core type is either a value object or entity (private fields, behaviour that enforces invariants) or a plain data record (public fields, no business behaviour). Never both. | A | review |
 | Q14 | Choose deliberately between an enum with exhaustive `match` (new operations expected) and a trait (new variants or plugins expected), and say which in the PR. No `_ =>` arms on enums. | J | clippy (`wildcard_enum_match_arm`); review |
 | Q15 | Do not call methods on an entity or service obtained from a collaborator (`a.b().c()`). Same-type builders, value objects and iterator chains are fine. | J | review |
-| Q16 | Each domain fact (rule, constant, validation, mapping) has one authoritative definition in the core. | A | review |
+| Q16 | Each domain fact (rule, constant, validation, mapping) has one authoritative definition, in the core that owns it. | A | review |
 | Q17 | Do not abstract structurally similar code before its third occurrence, unless it is the same knowledge (Q16). | J | review |
 | Q18 | If a change would add a mode flag or a caller-specific branch to a shared helper, inline the helper back into its callers instead. | J | review |
 | Q19 | Add no trait, parameter, configuration option or extension point that no current use or test exercises. Driven ports are exempt. | A | review |
@@ -171,11 +221,12 @@ Crates by role:
 | K1 | `docs/` holds the design of the whole system, one living design document per area: a behaviour from `VISION.md`, or a part of how Continual is built. Write no spec, plan, proposal or per-change document, whatever a skill or workflow asks for. The design goes into the design documents and the work into tickets. | A | `tusk doctor` (`no-specs-or-plans`); review |
 | K2 | A design document describes its area as a whole: what it does and for whom, its concepts, its behaviour with edge cases and errors, how it is built across core, ports, adapters and composition roots, and the decisions behind it with the alternatives rejected. Write in the present tense, with no dates, status lines or change history, and rewrite the parts the design changes rather than appending. | J | review |
 | K3 | A change that alters behaviour or design updates the design documents it affects in the same PR, so `docs/` matches the code. A new area gets its own document and a row in `docs/README.md`. | A | review; PR template |
-| K4 | Planning a feature means writing its design into the design documents and its work into tickets, reviewed like any change. A part designed but not built yet starts with `> Planned: [<ticket title>](../tickets/<name>.md)`. The PR that builds it removes the marker. | A | review; `tusk doctor` (`path-missing`) |
-| K5 | Planned work is a Tusk ticket at `tickets/<name>.md`, named for its outcome in kebab case. One ticket is one PR-sized change. Larger work is a parent ticket whose children name it with `parent`, and `blocks` orders tickets that depend on each other. | A | `tusk doctor` (`ticket-location`, `tickets-folder`) |
+| K4 | Planning a feature means writing its design into the design documents and its work into tickets, reviewed like any change. A part designed but not built yet starts with `> Planned: [<ticket title>](../tickets/<path>.md)`. The PR that builds it removes the marker. | A | review; `tusk doctor` (`path-missing`) |
+| K5 | Planned work is a Tusk ticket under `tickets/`. A task is named for its outcome in kebab case and lives in its story's folder; a story or an epic is `story.md` or `epic.md` in a folder of its own, named for its area, with stories numbered in build order inside their epic. One task is one PR. Larger work is a parent ticket whose children name it with `parent`, and `blocks` orders tickets that depend on each other. | A | `tusk doctor` (`ticket-location`, `tickets-folder`) |
 | K6 | A ticket states its goal, links to the design-document sections that hold its design, lists the behaviours to test (T2) and says when it is done. It does not restate the design. | J | review |
 | K7 | A ticket starts `pending`, becomes `active` when work starts, and becomes `completed` in the PR that finishes it. Change the status through Tusk, which checks each move. Work a PR leaves for later becomes a ticket listed under "Follow-ups". Dropped work is deleted with its planned markers. | A | Tusk workflow; review; PR template |
-| K8 | Each fact has one home: what Continual does for its users in `VISION.md`, how every change is made in `CONVENTIONS.md`, how each area is built in `docs/`, an item's contract in its doc comment, the planned work in `tickets/`. Link to the home instead of repeating it. | J | review |
+| K8 | Each fact has one home: what Continual does for its users in `VISION.md`, how every change is made in `CONVENTIONS.md`, how each area is built in `docs/`, an item's contract in its doc comment, the planned work in `tickets/`. Link to the home instead of repeating it. Each task is built in a session of its own, so whatever a later session needs is written to its home, or to `MEMORY.md` when it has none. That note stays short and whole: rewrite what changed, delete what no longer holds, and keep no log of a session. | J | review |
+| K9 | Estimate work in Fibonacci points before it becomes tickets. Work of 1, 2 or 3 points is a task, which carries its `points`. Work of 5 or more is a story: a parent ticket split into tasks of 1, 2 or 3 points, with no points of its own, so its size is the sum of its tasks. An epic groups stories into a milestone. Each task is workable on its own: it starts from what is merged, needs no other open ticket's code, and its PR meets the definition of done by itself. | A | `tusk doctor` (`task-size`, `parent-points`); review |
 
 ### Errors (E)
 
@@ -187,7 +238,7 @@ Crates by role:
 | E4 | No `unwrap` or `expect` outside tests, no ignored `Result`s, no empty error arms without a comment saying why. | A | clippy (`unwrap_used`, `expect_used`), `unused_must_use` |
 | E5 | The core never names technology error types. | A | follows from B1 |
 | E6 | Driven adapters translate technology failures with domain meaning into core errors, keeping the original as the source. Unexpected failures surface as one technology-neutral error. | A | adapter contract tests (T6) |
-| E7 | Driving adapters map core errors to their transport: CLI exit codes, harness-hook responses. Transport codes never appear in the core. | A | review; adapter tests |
+| E7 | Driving adapters map core errors to their transport: CLI exit codes, harness-hook responses. Transport codes never appear in a core. | A | review; adapter tests |
 | E8 | Use `Option` for legitimate absence. Use a special-case type only when "nothing" has real behaviour. | J | type checker; review |
 | E9 | When validation must report several problems, collect them instead of failing on the first. | J | review |
 | E10 | Before adding an error case, check whether the operation can be defined so the error cannot happen. | J | review |
@@ -201,10 +252,10 @@ Crates by role:
 | T3 | Core tests run without files, network, processes or the real clock. Driven ports get in-memory fakes. | A | core dependency allow-list and clippy lists also apply to tests |
 | T4 | Replace stateful driven ports with hand-written fakes and assert outcomes. Spies may record fire-and-forget calls. | J | review |
 | T5 | Never mock types you do not own; wrap the library behind a port and fake the port. No mocking crate without approval. | A | review; `arch.toml` and dependency review |
-| T6 | Each driven port has one contract suite, a generic test function run against the fake on every run and against each real adapter in CI. Suites and fakes live in `continual-core`'s `testing` module behind the `testing` feature, which the core's tests (through a dev-dependency on the crate itself) and adapter tests enable. Change the suite before changing the port. A fake has no behaviour the suite does not pin. | A | review; CI |
+| T6 | Each driven port has one contract suite, a generic test function run against the fake on every run and against each real adapter in CI. Suites and fakes live in the `testing` module of the core that declares the port, behind that crate's `testing` feature, which the core's tests (through a dev-dependency on the crate itself) and adapter tests enable. Change the suite before changing the port. A fake has no behaviour the suite does not pin. | A | review; CI |
 | T7 | Driving-adapter tests go through the real binary or framework and assert translation only. | A | review |
 | T8 | One or two smoke tests boot each real composition root. | J | `crates/*/tests/cli.rs` |
-| T9 | Test through the driving port; core tests live in `crates/continual-core/tests/`. Unit tests inside modules are for dense pure logic only. No test file per type by default. | J | review |
+| T9 | Test through the driving port; a core's tests live in its own `tests/` directory, `crates/continual-core/tests/` today. Unit tests inside modules are for dense pure logic only. No test file per type by default. | J | review |
 | T10 | Test names describe behaviour in domain language (`empty_segments_are_rejected`). | A | review |
 | T11 | One concept per test, arranged, acted and asserted; readability over reuse. | J | review |
 | T12 | A new test that passes on its first run is suspect: show it can fail by breaking the code once. | A | `cargo xtask mutants`; PR evidence |
@@ -220,9 +271,9 @@ mutants in the diff.
 | ID | Rule | Type | Check |
 | --- | --- | --- | --- |
 | X1 | Core logic never calls `now()`, random sources or ID generators directly. Pass the value in, or inject a `Clock` or ID port. | A | core `clippy.toml` (`SystemTime::now`, `Instant::now`) |
-| X2 | Technical logging, metrics and tracing live in adapters and composition roots, not behind a logging port. The core logs nothing for now; adding a logging facade to it needs an allow-list entry. | J | `arch.toml` |
-| X3 | Business-meaningful observations are domain events or results, never metric names or analytics calls in the core. | A | `cargo xtask arch` |
-| X4 | Configuration is read only in composition roots or adapters and reaches the core as typed values. | A | core `clippy.toml` (`std::env`) |
+| X2 | Technical logging, metrics and tracing live in adapters and composition roots, not behind a logging port. The cores log nothing for now; adding a logging facade to one needs an allow-list entry. | J | `arch.toml` |
+| X3 | Business-meaningful observations are domain events or results, never metric names or analytics calls in a core. | A | `cargo xtask arch` |
+| X4 | Configuration is read only in composition roots or adapters and reaches a core as typed values. | A | core `clippy.toml` (`std::env`) |
 | X5 | Adapters add correlation IDs and structured logs at translation points. | J | review |
 
 Authorisation has no rule yet; it is decided when the first feature needs it.
@@ -233,8 +284,8 @@ Authorisation has no rule yet; it is decided when the first feature needs it.
 | --- | --- | --- | --- |
 | V1 | Driving adapters reject malformed input (types, required fields, formats) and then build a core input. | A | adapter tests |
 | V2 | Core input types may validate their own structure on construction. | J | review |
-| V3 | Rules that need state live in the core. Value objects and entities enforce their invariants in their constructors (`CheckName::parse`) and never trust an adapter's validation. | A | core tests |
-| V4 | The same check at the edge (for good messages) and in the core (as an invariant) is not duplication. | J | review |
+| V3 | Rules that need state live in a core. Value objects and entities enforce their invariants in their constructors (`CheckName::parse`) and never trust an adapter's validation. | A | core tests |
+| V4 | The same check at the edge (for good messages) and in a core (as an invariant) is not duplication. | J | review |
 | M1 | External contracts (configuration files, a tool's output format, machine-readable findings) never expose core types directly; adapters own their DTOs. | A | review |
 | M2 | State-changing operations take a dedicated input type; read-only queries may return a read model. | J | review |
 | M3 | Each adapter owns its DTOs and maps both ways at its boundary (D3). Do not add a mapping layer in an unrelated change. | A | review |
@@ -251,7 +302,7 @@ These apply once a transactional store or a message broker exists.
 | TX2 | Store adapters do not commit when a use case may combine their writes. | A |
 | TX3 | Prefer one aggregate per transaction; record why when a use case changes two. | J |
 | TX4 | External side effects never share a database transaction's atomicity; use an outbox or compensating steps. | A |
-| EV1 | Domain events are plain data in the core; aggregates record them and do not publish them. | A |
+| EV1 | Domain events are plain data in a core; aggregates record them and do not publish them. | A |
 | EV2 | Events other systems rely on go through an outbox in the same transaction, unless a loss window is accepted and recorded. | A |
 | EV3 | Message consumers are driving adapters and are idempotent. | A |
 | EV4 | In-process event dispatch within one transaction is allowed for side effects in the same context. | J |
@@ -264,9 +315,9 @@ These apply once a transactional store or a message broker exists.
 | W2 | No trait with a single implementation unless it is a driven port (P4). | A | review |
 | W3 | No layer or type whose methods only delegate. | A | review |
 | W4 | Scripts and prototypes skip the hexagon; extract a port when the second adapter or the first fake appears. | J | review |
-| W5 | No hexagons inside hexagons. | A | review |
-| W7 | Do not impose global layers; feature modules inside the core share only genuine domain rules. | A | review |
-| W8 | Crates by role; modules by feature inside the core. Cross-feature calls go through the other feature's public API. | J | review |
+| W5 | No hexagons inside hexagons: cores sit side by side and never nest. | A | review |
+| W7 | Do not impose global layers; feature modules inside a core share only genuine domain rules. | A | review |
+| W8 | Crates by role: cores, adapters and composition roots. Modules by feature inside a core; cross-feature calls go through the other feature's public API. | J | review |
 
 W6 in the doc is specific to Go and does not apply.
 
@@ -295,27 +346,32 @@ worked examples and the "add a driven port" and "swap a technology" workflows.
 0. **Complexity gate.** If the feature only moves fields with no domain rule, use the simplest
    structure that keeps technology out of the rules that exist (W1), then go to the definition
    of done.
-1. **A business rule, invariant, calculation or flow changes.** It goes in `continual-core`:
-   value objects for invariants, use cases for orchestration. Test it through the core's
-   public API with fakes (T1, T3). Ports change only if the conversation changes (P9).
-2. **The core needs something new from outside** (read files, run a tool, ask git, the time). If an
-   existing driven port's conversation covers it, add an operation to that port; otherwise
-   create a port named for the purpose (P1, P4) with full docs (P5). Then change the contract
-   suite first, then the fake, then the real adapter (T6).
+1. **A business rule, invariant, calculation or flow changes.** It goes in the core that owns
+   the rule: value objects for invariants, use cases for orchestration. Test it through that
+   core's public API with fakes (T1, T3). Ports change only if the conversation changes (P9).
+   A rule no core owns goes in the core whose model it shares, or in a new core when it has
+   rules of its own and a narrow conversation with the rest (H5).
+2. **A core needs something new from outside** (read files, run a tool, ask git, the time,
+   another core's answer). If an existing driven port's conversation covers it, add an
+   operation to that port; otherwise create a port named for the purpose (P1, P4) with full
+   docs (P5). Then change the contract suite first, then the fake, then the real adapter (T6).
+   When the actor is another core, the adapter is a bridge (H2, H3).
 3. **A new entry point uses existing behaviour** (CLI command, harness hook). It goes
    only in a driving adapter: build a core input, call one core operation, map results and
    errors (A2, E7, V1). Test it through the real binary (T7).
 4. **A technology swap or upgrade** (process launcher, git library, a language's parser). It
    goes only in the adapter and the composition root, and the contract suite must pass
    unchanged. Any core, port or core-test change means stop and report (G7).
-5. **The core wants a third-party library.** A pure-computation library may go on `arch.toml`'s
-   allow-list with a reason and a contributor's approval. Anything with I/O goes behind a port.
+5. **A core wants a third-party library.** A pure-computation library may go on that core's
+   allow-list in `arch.toml` with a reason and a contributor's approval. Anything with I/O goes
+   behind a port.
 6. **A cross-cutting concern.** Time and randomness: X1. Logging: X2. Business observations:
    X3. Configuration: X4. Retries and timeouts: A3.
 7. **Wiring only.** It goes in a composition root, with a smoke test if the path is new (T8).
 
 **Escape hatch.** If the change fits no step, or two in conflict, state the ambiguity and the
-choice you made, or stop and report when the choice would add a port or cross a boundary.
+choice you made, or stop and report when the choice would add a port or a core, or cross a
+boundary.
 
 ## 6. Commits, PRs and review
 
@@ -336,7 +392,7 @@ choice you made, or stop and report when the choice would add a port or cross a 
 | Core restrictions | `crates/continual-core/clippy.toml` (same clippy run) | B6, X1, X4, Q8 |
 | Docs | `cargo doc --workspace --no-deps` with `RUSTDOCFLAGS="-D warnings"` | C4 |
 | Comments | `cargo xtask comments` | C1–C3, Q20 |
-| Architecture | `cargo xtask arch` (also: every crate sets `[lints] workspace = true`) | B1–B7, B9, P7, X3, M4, Q21 |
+| Architecture | `cargo xtask arch` (also: every crate sets `[lints] workspace = true`) | B1–B7, B9, H1, H4, P7, X3, M4, Q21 |
 | Guard | `cargo xtask guard` (CI: the PR checks workflow, `--ci --labels …`) | G5, G9, B10, R2 |
 | Tests | `cargo nextest run --workspace`, `cargo test --workspace --doc` | T rules |
 | Coverage | `cargo xtask coverage` | section 4, Tests |
@@ -347,7 +403,7 @@ choice you made, or stop and report when the choice would add a port or cross a 
 | Git hooks | `lefthook.yml` | Q21, C1–C3, R3, R5 |
 | Claude Code hooks | `.claude/settings.json` | R1, G9, C1–C3, Q21 |
 | Everything, in order | `cargo xtask ci`; GitHub Actions `.github/workflows/ci.yml` and `.github/workflows/pr-checks.yml` | all of the above |
-| Design documents and tickets | `tusk doctor`, with the rules, ticket workflow and `links-to` paths in `tusk.toml`; local only, since CI has no Tusk | K1, K4, K5, K7 |
+| Design documents and tickets | `tusk doctor`, with the rules, ticket workflow and `links-to` paths in `tusk.toml`; local only, since CI has no Tusk | K1, K4, K5, K7, K9 |
 
 ## 8. Resolved decisions
 
@@ -365,7 +421,7 @@ Change one by PR (section 1).
 | D7 | TDD strictness | Canon TDD: a test list, red before green, the red run observed. Commit order cannot be enforced because commits wait for the review gate. |
 | D8 | Logging | No logging port. Adapters and composition roots log; business observations are domain events if needed. |
 | D9 | Internal core structure | None prescribed beyond feature-first modules. |
-| D10 | Package layout | Crates by role; modules by feature inside the core. |
+| D10 | Package layout | Crates by role: cores, adapters and composition roots; modules by feature inside a core. |
 | D11 | Cross-aggregate transactions | Not applicable until a transactional store exists. |
 | D12 | Event reliability | Not applicable until a message broker exists. |
 | D13 | Comment policy | Interface docs on all public items and ports, plus the no-comment-blocks rule (C1–C5). |

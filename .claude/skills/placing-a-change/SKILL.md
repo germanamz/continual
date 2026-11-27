@@ -14,18 +14,24 @@ diff inside them (G3). The full rules are in `CONVENTIONS.md`; IDs below point t
 or a calculation beyond copying fields? If not, use the simplest structure that keeps technology
 out of whatever rules exist (W1), and say so in the PR.
 
-**1. A business rule, invariant, calculation or flow changes.** Edit `crates/continual-core` only.
-Invariants go in the value object's constructor; orchestration goes in a use-case function or
-type. Test through the public API in `crates/continual-core/tests/` with fakes.
+**1. A business rule, invariant, calculation or flow changes.** Edit only the core that owns
+the rule: `crates/continual-core` today, one of the cores under `crates/cores/` once they
+exist. Invariants go in the value object's constructor; orchestration goes in a use-case
+function or type. Test through that core's public API in its `tests/` directory with fakes. A
+rule no core owns goes in the core whose model it shares, or in a new core when it has rules
+of its own and a narrow conversation with the rest (H5); a new core is a stop-and-report
+choice.
 
 > Example: "a check name may not contain `--`". Add the case to `CheckName::parse` and a
 > test such as `consecutive_hyphens_are_rejected`. No adapter changes.
 
-**2. The core needs something new from outside** (the repository's files, an external tool,
-git, the time). Look for a driven port whose conversation already covers it and add an
-operation there. Otherwise create one: a trait in the core named for the purpose (`ToolRunner`,
-not `StdProcessRunner`), documented in full (P5), justified by an external actor (P4). Then
-follow "Add a driven port and its adapter" below.
+**2. A core needs something new from outside** (the repository's files, an external tool,
+git, the time, another core's answer). Look for a driven port of that core whose conversation
+already covers it and add an operation there. Otherwise create one: a trait in that core named
+for the purpose (`ToolRunner`, not `StdProcessRunner`), documented in full (P5), justified by
+an actor outside the core (P4). Never depend on the other core's crate or copy its rule (H4).
+Then follow "Add a driven port and its adapter" below; when the actor is another core, the
+adapter is a bridge.
 
 **3. A new entry point for existing behaviour** (a CLI subcommand, a harness hook). Edit only
 the driving adapter: parse and check the input's shape, build the core input, call one core
@@ -35,9 +41,9 @@ V1). Test it by running the real binary (T7).
 **4. A technology swap or upgrade** (process launcher, git library, a language's lexer). Follow
 "Swap a technology" below. Only the adapter and the composition root change.
 
-**5. The core wants a third-party library.** A pure-computation library (no I/O, no runtime)
-can go on `arch.toml`'s core allow-list with a reason, after the contributor approves. Anything
-else goes behind a port.
+**5. A core wants a third-party library.** A pure-computation library (no I/O, no runtime)
+can go on that core's allow-list in `arch.toml` with a reason, after the contributor approves.
+Anything else goes behind a port.
 
 **6. A cross-cutting concern.** Time and IDs: pass them in or use a port (X1). Logging: adapters
 and composition roots (X2). Configuration: read in the composition root, passed as typed values
@@ -47,13 +53,17 @@ and composition roots (X2). Configuration: read in the composition root, passed 
 (T8).
 
 **Escape hatch.** If nothing fits, or two steps conflict, write down the ambiguity and your
-choice. If the choice would add a port or cross a boundary, stop and report instead (G7).
+choice. If the choice would add a port or a core, or cross a boundary, stop and report instead
+(G7).
 
 ## Workflow: add a driven port and its adapter
 
-1. Write the trait in the core, documenting inputs, outputs, `# Errors`, side effects and
-   invariants. Its error type is a core enum (E2).
-2. Write the contract suite first (T6). It lives in `continual-core`'s `testing` module, compiled
+The paths below are those of `continual-core`, the one core today; another core's port follows
+the same steps in its own crate.
+
+1. Write the trait in the core that needs it, documenting inputs, outputs, `# Errors`, side
+   effects and invariants. Its types and its error enum are that core's own (B7, E2).
+2. Write the contract suite first (T6). It lives in that core's `testing` module, compiled
    only with the crate's `testing` feature (`#[cfg(feature = "testing")] pub mod testing;`), so
    both the core's tests and every adapter's tests can call it:
 
@@ -75,9 +85,12 @@ choice. If the choice would add a port or cross a boundary, stop and report inst
    the source (A4, E6). Its tests enable the suite with
    `continual-core = { path = "../../continual-core", features = ["testing"] }` in
    `[dev-dependencies]` and run it against the real adapter.
-5. Wire it in the composition root: driven adapters first, then the core, then driving adapters
-   (B5).
-6. Run `cargo xtask arch`: it confirms the new crate is classified and depends only on the core.
+   A bridge is the same crate with a second dependency: the core it calls. It is named for the
+   two cores, the one that asks first (`engine-registry`), and it only maps types and errors
+   between them (H3).
+5. Wire it in the composition root: each core after the driven adapters it needs, a bridge
+   after the core it calls, and the driving adapters last (B5).
+6. Run `cargo xtask arch`: it confirms the new crate is classified and depends only on cores.
 
 ## Workflow: swap a technology
 

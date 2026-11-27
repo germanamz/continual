@@ -27,24 +27,28 @@ fixes for PR comments.
 
 ## Map
 
-- `crates/continual-core/`: the core. Domain types and port traits; no I/O.
+- `crates/continual-core/`: the one core so far. Domain types and port traits; no I/O. The
+  planned cores go under `crates/cores/<name>/` (`docs/workspace.md`).
 - `crates/continual/`: the CLI binary. `main.rs` is the composition root, `cli.rs` the driving
   adapter.
-- `crates/adapters/<name>/`: adapter crates (none yet).
+- `crates/adapters/<name>/`: adapter crates, bridges among them (none yet).
 - `xtask/`: the checks behind `cargo xtask`.
-- Core behaviour tests go through the public API in `crates/continual-core/tests/`.
+- A core's behaviour tests go through its public API in its own `tests/` directory.
 
 ## Invariants
 
-- The core has no technology dependencies and no I/O, clock, environment, process or
+- A core has no technology dependencies and no I/O, clock, environment, process or
   randomness (B1, B6, X1). Checked by `cargo xtask arch` and the core's `clippy.toml`.
-- Driven ports are traits declared in the core and implemented by adapters. Driving adapters
-  call core types directly, without single-implementation traits (B2, B3, P8, W2).
+- No core depends on another or shares a crate with one. A core that needs another declares a
+  driven port, and a bridge adapter implements it by calling the other core (H1–H4).
+- Driven ports are traits declared in the core that needs them and implemented by adapters.
+  Driving adapters call core types directly, without single-implementation traits (B2, B3, P8,
+  W2).
 - Adapters do not depend on each other except couplings declared in `arch.toml`, and only
   composition roots wire adapters (B4, B5). Checked by `cargo xtask arch`.
-- Checks, findings, pipelines, rules and gates are domain concepts in the core. Launching tools,
-  reading files, git and each language's parser are adapters (P1).
-- A new external dependency of the core goes on `arch.toml`'s allow-list only with a stated
+- Checks, findings, pipelines, rules and gates are domain concepts in the cores. Launching
+  tools, reading files, git and each language's parser are adapters (P1).
+- A new external dependency of a core goes on `arch.toml`'s allow-list only with a stated
   reason and the contributor's approval.
 
 ## Code
@@ -79,7 +83,11 @@ fixes for PR comments.
 - No spec, plan or proposal documents, even when a skill asks for one. The design goes in the
   design documents in `docs/`, updated in the same PR as the change (K1–K3, K8).
 - Planned work is a Tusk ticket in `tickets/` (see `tickets/README.md`). Unbuilt design is marked
-  `> Planned: [title](../tickets/<name>.md)` until the PR that builds it (K4–K7).
+  `> Planned: [title](../tickets/<path>.md)` until the PR that builds it (K4–K7).
+- A task is 1, 2 or 3 Fibonacci points, one PR, workable on its own; work of 5 or more is a
+  story split into tasks (K9).
+- Each task is built in a session of its own. What the next session needs goes to its home,
+  or to `MEMORY.md` when it has none: short, rewritten whole, never a session log (K8).
 
 ## Stop and report when
 
@@ -87,7 +95,8 @@ fixes for PR comments.
 - a test conflicts with the requirement, or a fix needs an existing test changed;
 - `cargo xtask guard` reports findings;
 - a check fails because of a problem outside the change;
-- a new driven port has no external actor, or it is unclear which actor owns a rule;
+- a new driven port has no external actor, or it is unclear which actor or which core owns a
+  rule;
 - a dependency or package cannot be verified.
 
 ## Commits and PRs

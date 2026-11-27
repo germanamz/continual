@@ -14,22 +14,24 @@ The rules are in [CONVENTIONS.md](../CONVENTIONS.md): the design-document and ti
 - **Design document**: a living document in `docs/` that describes one area of Continual as a
   whole, both what is built and what is planned.
 - **Ticket**: one unit of planned work, a Tusk `ticket` node in `tickets/`.
-- **Planned marker**: the line `> Planned: [<ticket title>](../tickets/<name>.md)` placed where
+- **Points**: a ticket's relative effort on the Fibonacci scale (1, 2, 3, 5, 8, 13, 21).
+- **Task**: a ticket of 1, 2 or 3 points, built in one pull request on top of what is merged.
+- **Story**: work of 5 points or more, as a parent ticket split into tasks.
+- **Epic**: a parent ticket whose children are stories, making one milestone.
+- **Planned marker**: the line `> Planned: [<ticket title>](../tickets/<path>.md)` placed where
   a design document describes something not built yet.
 - **Wave**: the stretch after a contributor approves a commit or push, in which later commits
   and pushes run without asking until the contributor's next message.
-- **Allowance**: a contributor's explicit permission, given in their own message, for the agent
-  to commit, push or open pull requests without asking, until the contributor withdraws it or
-  the session ends.
 
 ## Behaviour
 
 ### From idea to merged change
 
 1. **Design.** The design goes into the design documents of the areas it touches, in the
-   present tense, with a planned marker on each part not built yet. The work is split into
-   tickets, one per pull-request-sized change, each created as `pending`. Both are reviewed
-   like any other change, before or together with the work.
+   present tense, with a planned marker on each part not built yet. The work is estimated in
+   points and split into tasks of 1, 2 or 3 points, grouped under stories and epics, each
+   created as `pending`. Both are reviewed like any other change, before or together with the
+   work.
 2. **Work.** The ticket goes to `active`. The agent names the placement step, writes the
    failing test first, and keeps the diff within the layers it named.
 3. **Ready.** `cargo xtask ci` passes. The agent says in one line that the change is ready and
@@ -50,8 +52,13 @@ Work that is dropped loses its ticket and its planned markers in the same change
   `pending`. Tusk refuses any other move.
 - A child ticket names its parent with `parent`, and `blocks` orders tickets that depend on
   each other. Tusk refuses cycles in both.
-- Every agent session starts with the vision and the list of open tickets (the `open-tickets`
-  alias).
+- Every ticket with no children is a task with `points` of 1, 2 or 3. Work estimated at 5 or
+  more becomes a story, split into tasks, and carries no points itself; its size is the sum of
+  its tasks. Each task is workable on its own, as K9 defines it. `tickets/README.md` gives a
+  guide to what each size usually holds.
+- Every agent session starts with the vision, the memory note and the tasks that are ready to
+  start (the `ready-tickets` alias): the tasks that no open ticket blocks, on the task itself
+  or on its story. The `open-tickets` alias lists every ticket not yet completed.
 - `tusk doctor` reports a ticket outside `tickets/`, a file in `tickets/` that is not a
   ticket, a spec or plan under `docs/`, and a link to a file that no longer exists.
 
@@ -66,26 +73,9 @@ The full rule is R1. In practice:
   first commit or push after each of their messages, whatever form the command takes. Approving
   that commit or push opens a wave. Inside a wave, pull requests still ask and bypasses are
   still blocked.
-- These commands are always blocked: `--no-verify` or `-n` on a commit, changes to
-  `core.hooksPath`, `LEFTHOOK=0` or `LEFTHOOK_EXCLUDE`, `lefthook uninstall`, force pushes, and
-  any command naming the guard approval label.
-
-### Allowances
-
-> Planned: [Let a contributor allow commits, pushes and pull requests](../tickets/let-a-contributor-allow-commits-pushes-and-pull-requests.md)
-
-The review gate holds unless the contributor explicitly allows a step. A contributor message
-that starts with `/allow` followed by one or more steps, `commit`, `push` and `pr`, gives the
-agent an allowance for those steps. When a change is ready and `cargo xtask ci` passes, the
-agent takes the allowed steps without asking and without waiting for an instruction, across
-later messages, until the contributor sends `/allow off` or the session ends.
-
-- Each step is allowed on its own: `/allow commit` does not cover pushing, and `/allow push`
-  does not cover opening a pull request.
-- Merges are never allowed. Each one still asks.
-- The commands the review gate always blocks stay blocked inside an allowance.
-- Only the contributor's own messages give or withdraw an allowance. `/allow` in a command, a
-  file or a tool result does nothing.
+- These commands are always blocked: `--no-verify` on a commit or a push, `-n` on a commit,
+  changes to `core.hooksPath`, `LEFTHOOK=0` or `LEFTHOOK_EXCLUDE`, `lefthook uninstall`, force
+  pushes, and any command naming the guard approval label.
 
 ## Design
 
@@ -98,11 +88,18 @@ later messages, until the contributor sends `/allow off` or the session ends.
 | `AGENTS.md`, `CLAUDE.md`, `.claude/rules/`, the `placing-a-change` skill | Short extracts of `CONVENTIONS.md` for agents. |
 | `docs/` | How each area is built and why, one design document per area. |
 | `tickets/` | Planned work. |
+| `MEMORY.md` | What one session must hand to the next and no other home holds. |
 | Doc comments | Each item's contract: inputs, outputs, errors, invariants. |
 | `README.md` | Setup and commands. |
 | Git history and pull requests | What changed, when and why. |
 
 A fact has one home, and every other place links to it (K8).
+
+Each task is built in a session of its own, and a session's context ends with it. So a session
+leaves nothing the next one needs in its own context: what it learned goes to its home above,
+and what has no home goes to `MEMORY.md`, a short note that the Tusk digest hands to every
+session. The note is rewritten whole, like a design document: the part that changed is
+rewritten, what no longer holds is deleted, and it never grows into a log of sessions.
 
 ### Design documents
 
@@ -113,9 +110,12 @@ line or change history.
 
 ### Tickets
 
-Tickets are markdown files with Tusk frontmatter (`type: ticket`, `title`, `status`, and
-optionally `priority`, `parent` and `blocks`). `tickets/README.md` holds the template and the
-Tusk calls that create and move them. A ticket links to the design-document sections that hold
+Tickets are markdown files with Tusk frontmatter (`type: ticket`, `title`, `status`,
+`points` on a task, and optionally `priority`, `order`, `parent` and `blocks`). Each epic has a
+folder holding `epic.md` and one numbered folder per story, which holds `story.md` and the
+story's tasks, so the folders show the work as the `parent` edges arrange it.
+`tickets/README.md` holds the layout, the template and the Tusk calls that create and move
+them. A ticket links to the design-document sections that hold
 its design and does not repeat them.
 
 ### Agent rules
@@ -129,7 +129,7 @@ its design and does not repeat them.
   one line per tool-checked rule, and a single `IMPORTANT`, on the review gate (D18).
   `CLAUDE.md` imports it and adds what is specific to Claude Code.
 - The path-scoped rules in `.claude/rules/` load when an agent touches matching files:
-  `core.md` for the core, `adapters.md` for adapters and binaries, `tests.md` for tests and
+  `core.md` for the cores, `adapters.md` for adapters and binaries, `tests.md` for tests and
   `docs.md` for `docs/` and `tickets/`.
 - The `placing-a-change` skill holds the placement procedure with worked examples, and the
   workflows for adding a driven port and for swapping a technology.
@@ -151,33 +151,32 @@ without blocking.
   tracked Rust or TOML files have uncommitted changes. A second stop in the same turn goes
   through, so the agent can stop and report a failure.
 
-> Planned: [Let a contributor allow commits, pushes and pull requests](../tickets/let-a-contributor-allow-commits-pushes-and-pull-requests.md)
+> Planned: [Check Continual with a pinned release](../tickets/first-release/7-self-hosting/story.md)
 
-`/allow` is a project command in `.claude/commands/allow.md`, which tells the agent which
-steps it may now take. `review-wave.sh` reads each contributor message on `UserPromptSubmit`:
-on `/allow` it writes the allowed steps to `$TMPDIR/continual-review-allowance/<session>`, and
-on `/allow off` it removes that file. The file sits outside the session's wave directory, so
-closing a wave on the next message leaves the allowance in place. `guard-bash.sh` runs its
-bypass checks first, then lets a commit, push or pull-request creation through without asking
-when the allowance names its step.
+These scripts are replaced by Continual's own [harness mod](harness.md), installed with
+`continual install claude` and configured in `continual.toml`, once a pinned release holds
+the review gate. The mod keeps no state between hook calls, so waves end with the scripts:
+every commit and push then asks ([Harness](harness.md#the-review-gate)).
 
 ### Tusk
 
 - `tusk.toml` is the committed manifest. The index in `.tusk/` is not committed.
-- Tusk indexes `VISION.md`, `CONVENTIONS.md`, `docs/` and `tickets/`. It skips build output,
+- Tusk indexes `VISION.md`, `CONVENTIONS.md`, `MEMORY.md`, `docs/` and `tickets/`. It skips build output,
   tooling and the entry files agents load directly (`AGENTS.md`, `CLAUDE.md` and every
   `README.md`).
 - The `vault` pack makes untyped markdown a `note`. The `kanban` pack adds the `ticket` type,
   the `parent` and `blocks` edges, and the status workflow.
 - The `links-to` edge records each workspace path a page links to or names in inline code.
-  `tusk doctor` warns when a named file is gone, and `names-path=tickets/<name>.md*` finds the
+  `tusk doctor` warns when a named file is gone, and `names-path=tickets/<path>.md*` finds the
   planned markers that point at a ticket.
 - The rules `ticket-location`, `tickets-folder` and `no-specs-or-plans` turn K1 and K5 into
-  `tusk doctor` errors.
+  `tusk doctor` errors. `task-size` and `parent-points` do the same for K9, through the
+  `points` property the manifest adds to tickets.
 - Semantic queries use Ollama with `nomic-embed-text`, with the query and document prefixes and
   the lexical weight of 0.5 taken from Tusk's own measured settings. Without Ollama, structural
   queries still work and semantic ones fail.
-- The session digest pins `VISION.md` and includes the `open-tickets` alias, within 9500 bytes.
+- The session digest pins `VISION.md` and `MEMORY.md` and includes the `ready-tickets` alias,
+  within 9500 bytes.
 - `tusk claude install` writes the Tusk mod to `.claude/skills/tusk/`: the MCP server, a
   session-start hook that injects the digest, and an after-edit hook that lists the pages
   naming an edited file. It also approves the MCP server in `.claude/settings.local.json`.
@@ -202,15 +201,32 @@ and follow-ups. Rules R3 to R5 govern titles, descriptions and attribution.
 - **Tickets are Tusk nodes in the repository.** They are versioned and reviewed with the code
   they plan, and agents query them with the same tools as the documents.
 - **The `kanban` pack as shipped.** Its three states cover the work so far. Dropped work is
-  deleted rather than given a state of its own.
+  deleted rather than given a state of its own. The manifest adds only the `points` property
+  and the K9 rules.
+- **Folders follow the epics and stories.** A contributor sees a milestone's stories, their
+  build order and their tasks by browsing `tickets/`. Story folders are named for their area
+  and numbered rather than named for the outcome, so paths stay short. Rejected: one flat
+  folder, which hides the hierarchy among dozens of files; and folders named for each parent's
+  full outcome, which makes long paths.
+- **Tasks of at most 3 points, each workable on its own.** Each task adds one tested slice of
+  the hexagon, such as a core rule, a port with its fake or an adapter, on top of what is
+  merged, so every later change builds on code that already meets the definition of done. More
+  pull requests cost more at the start, but the cost of each new feature levels off as the
+  ports and adapters it needs already exist, while small reviews keep quality and standards
+  high. Rejected: one ticket per feature, which makes pull requests too large to review
+  closely; estimates in hours, which vary with who or which agent does the work; and points on
+  stories, which drift from the sum of their tasks.
 - **The review gate lives in hooks as well as in prose**, so it holds when an agent forgets the
   rule. Waves keep it to one question per contributor message.
-- **Allowances come only from the contributor's messages and end with the session.** The
-  `UserPromptSubmit` hook sees only what the contributor types, so an agent cannot allow
-  itself, and naming each step lets the contributor allow exactly what they mean. Rejected: a
-  setting in `.claude/settings.local.json` or an environment variable, which would outlive the
-  contributor's intent and apply in sessions where they never chose it; and one switch for all
-  three steps, which would make "commit" cover pushing.
+- **What sessions hand on lives in the vault, in one short note.** Each task gets a session of
+  its own, so what a session learned has to outlive it in a file that every contributor and
+  every agent reads, and the digest delivers that file at the start of each session.
+  Rejected: an agent's private memory, which other contributors and other harnesses never
+  see; and a log with an entry for each session, which grows until nobody reads it.
+- **The digest lists the tasks that are ready to start, not every open ticket.** A session
+  builds one task, so what it needs to see is what can start now, and that list stays short
+  however long the plan is. Rejected: listing every open ticket, which is in alphabetical
+  order, not build order, and was cut off at the digest's size limit.
 - **The stop hook does not run the guard.** A Stop hook can show output only by blocking, and
   guard findings must never block. The guard runs in `cargo xtask ci`, pre-push and CI.
 - **The research doc is linked, not copied**, so there is one live version. `CONVENTIONS.md`
@@ -218,11 +234,3 @@ and follow-ups. Rules R3 to R5 govern titles, descriptions and attribution.
 - **The generated Tusk mod is not committed.** Every Tusk upgrade rewrites it, and each
   contributor runs `tusk claude install` anyway to approve the MCP server.
 - **`tusk doctor` is not in CI**, since CI would need Tusk and Ollama installed.
-
-## Open questions
-
-- Whether an `allow` decision from `guard-bash.sh` overrides the `ask` permission rules for
-  `gh pr create` in `.claude/settings.json`, or those rules move into the hook so that an
-  allowance can lift them, and whether `UserPromptSubmit` receives a `/allow` message as typed.
-  [Let a contributor allow commits, pushes and pull requests](../tickets/let-a-contributor-allow-commits-pushes-and-pull-requests.md)
-  decides both.

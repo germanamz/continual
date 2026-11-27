@@ -1,8 +1,8 @@
 [workspace]
 name = "continual"
 # Gitignore-style patterns. Index the knowledge documents (VISION.md, CONVENTIONS.md,
-# docs/) and the tickets (tickets/); skip build output, tooling, and the entry files
-# agents load directly.
+# MEMORY.md, docs/) and the tickets (tickets/); skip build output, tooling, and the entry
+# files agents load directly.
 ignore = [
     "target/",
     "mutants.out/",
@@ -86,10 +86,11 @@ document-prefix = "search_document: "
 [query]
 lexical-weight = 0.5
 
-# Every session starts with the product picture and the open tickets.
+# Every session starts with the product picture, what earlier sessions handed on, and the
+# tasks that are ready to start.
 [context]
-pinned    = ["VISION"]
-include   = ["open-tickets"]
+pinned    = ["VISION", "MEMORY"]
+include   = ["ready-tickets"]
 max-bytes = 9500
 
 # Added by `tusk pack add kanban` on 2026-11-06
@@ -121,6 +122,7 @@ properties = [
     { name = "priority", type = "enum", values = ["low", "medium", "high"] },
     { name = "due",      type = "date" },
     { name = "order",    type = "int" },
+    { name = "points",   type = "int" },
 ]
 
 [edge-types.parent]
@@ -161,7 +163,7 @@ transitions = [
 # Continual's own additions: see CONVENTIONS.md (Design documents and tickets, K).
 
 # Markdown links and inline-code paths become path refs, so `tusk doctor` warns
-# when a page names a file that is gone, and `names-path=tickets/<name>.md*` finds
+# when a page names a file that is gone, and `names-path=tickets/<path>.md*` finds
 # the planned markers that point at a ticket.
 [edge-types.links-to]
 description = "A page links to a workspace file or names it in inline code"
@@ -177,12 +179,23 @@ filter      = "type=ticket AND NOT path=tickets/**"
 description = "tickets/ holds only tickets"
 filter      = "path=tickets/** AND NOT type=ticket"
 
+# Points are relative effort on the Fibonacci scale, and only tasks carry them (K9).
+# A ticket with no children is a task of 1, 2 or 3 points; bigger work is a story.
+[rule.task-size]
+description = "a ticket with no children is a task of 1, 2 or 3 points; split work of 5 or more into tasks under a story"
+filter      = "type=ticket AND NOT parent<- type=ticket AND NOT points=1..3"
+
+# A story or an epic is sized by its tasks and carries no points of its own (K9).
+[rule.parent-points]
+description = "a ticket with children carries no points; its size is the sum of its tasks"
+filter      = "type=ticket AND parent<- type=ticket AND points=*"
+
 # The design lives in the design documents, not in specs or plans (K1).
 [rule.no-specs-or-plans]
 description = "docs/ holds design documents, one per area, not specs or plans; put the design in the area's document and the work in tickets/"
 filter      = "path=docs/superpowers/** OR path=docs/**/specs/** OR path=docs/**/plans/**"
 
-# The session digest lists the work that is not finished, active tickets first.
+# Every ticket that is not finished, active tickets first.
 [alias.open-tickets]
 command     = "query"
 description = "tickets not yet completed"
@@ -191,4 +204,16 @@ description = "tickets not yet completed"
 filter = "type=ticket AND status!=completed"
 sort   = "+status,+id"
 fields = ["id", "title", "properties.status", "properties.priority"]
+format = "compact"
+
+# The session digest lists the tasks a session can start: those that no open ticket
+# blocks, either the task itself or its story (see tickets/README.md).
+[alias.ready-tickets]
+command     = "query"
+description = "tasks that no open ticket blocks"
+
+[alias.ready-tickets.args]
+filter = "type=ticket AND points=* AND status!=completed AND NOT blocks<- status!=completed AND NOT parent-> blocks<- status!=completed"
+sort   = "+status,+id"
+fields = ["id", "title", "properties.status", "properties.points"]
 format = "compact"
